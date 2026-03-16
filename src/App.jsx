@@ -10,11 +10,57 @@ var PROMPT_KOHORT = "Du är en klinisk dataanalytiker. Svara på svenska med å�
   + "Analysera kohortdatan baserat på användarens fråga. Ange specifika siffror: antal patienter, procent, medelvärden.\n"
   + "Skriv 4-8 meningar ren löptext. Ingen markdown (inga **, #, punktlistor). Inga taggar.";
 
-var PROMPT_PUBMED = "Du är en medicinsk forskare. Svara på svenska med åäö.\n\n"
-  + "Sök ENBART på PubMed (pubmed.ncbi.nlm.nih.gov) efter publicerade studier relevanta för frågan nedan.\n"
-  + "Kontexten är: män 50-65 år med prostatacancer och insulinbehandlad diabetes.\n\n"
-  + "Citera 2-4 studier med författare, årtal och tidskrift. Skriv 4-8 meningar ren löptext.\n"
-  + "Ingen markdown. Inga taggar. Sök BARA på pubmed.ncbi.nlm.nih.gov, inga andra sajter.";
+// PubMed-sökning bygger en MeSH-liknande query från användarens fråga
+var PUBMED_KEYWORDS = {
+  "hba1c": "HbA1c glycated hemoglobin",
+  "adt": "androgen deprivation therapy",
+  "hormon": "androgen deprivation therapy hormonal",
+  "psa": "prostate-specific antigen PSA",
+  "ralp": "robot-assisted laparoscopic prostatectomy",
+  "strål": "radiotherapy radiation prostate",
+  "operation": "prostatectomy surgical",
+  "diabetes": "diabetes mellitus insulin",
+  "metformin": "metformin prostate cancer",
+  "hjärt": "cardiovascular prostate cancer",
+  "kärl": "cardiovascular prostate cancer",
+  "komorbid": "comorbidity prostate cancer diabetes",
+  "njur": "renal function eGFR prostate cancer",
+  "gleason": "Gleason score prostate cancer",
+  "biokemisk": "biochemical recurrence prostate cancer",
+  "recidiv": "recurrence prostate cancer",
+  "utfall": "outcomes prostate cancer treatment",
+  "risk": "risk stratification prostate cancer",
+  "insulin": "insulin diabetes prostate cancer"
+};
+
+function buildPubmedQuery(question) {
+  var q = question.toLowerCase();
+  var terms = ["prostate cancer", "diabetes"];
+  for (var kw in PUBMED_KEYWORDS) {
+    if (q.indexOf(kw) >= 0) {
+      terms.push(PUBMED_KEYWORDS[kw]);
+      break; // ta bara det mest specifika
+    }
+  }
+  return terms.join(" ");
+}
+
+function pubmedCall(question, signal) {
+  var searchQuery = buildPubmedQuery(question);
+  return fetch("/api/pubmed", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    signal: signal,
+    body: JSON.stringify({ query: searchQuery, maxResults: 5 })
+  }).then(function(r) { return r.json(); }).then(function(data) {
+    return {
+      summary: data.summary || "Inga resultat.",
+      articles: data.articles || [],
+      totalFound: data.totalFound || 0,
+      searchQuery: data.searchQuery || searchQuery
+    };
+  });
+}
 
 function buildSyntesPrompt(kohortText, pubmedText) {
   return "Du är en klinisk rådgivare. Svara på svenska med åäö.\n\n"
@@ -77,16 +123,13 @@ function cleanMd(r) {
     .replace(/^#{1,4}\s*/gm,"").replace(/`([^`]+)`/g,"$1").replace(/\n{3,}/g,"\n\n").trim();
 }
 
-function apiCall(sysPrompt, userMsg, signal, useSearch) {
+function apiCall(sysPrompt, userMsg, signal) {
   var body = {
     model: "claude-sonnet-4-20250514",
     max_tokens: 1024,
     system: sysPrompt,
     messages: [{ role: "user", content: userMsg }]
   };
-  if (useSearch) {
-    body.tools = [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }];
-  }
   return fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -112,16 +155,20 @@ function Paras(props) {
 
 var SECTION_STYLES = {
   kohort: { b: "#2563eb", bg: "#f7f9ff", l: "■ VÅR KOHORTDATA — syntetisk (n=100)", lb: "#1e3a5f" },
-  pubmed: { b: "#059669", bg: "#f4fdf9", l: "◆ PUBLICERAD EVIDENS (PubMed)", lb: "#065f46" },
+  pubmed: { b: "#059669", bg: "#f4fdf9", l: "◆ PUBLICERAD EVIDENS (PubMed E-utilities)", lb: "#065f46" },
   syntes: { b: "#7c3aed", bg: "#faf5ff", l: "▶ SAMMANVÄGD BEDÖMNING", lb: "#6b21a8" }
 };
 
 function Section(props) {
   var s = SECTION_STYLES[props.type] || SECTION_STYLES.kohort;
   var isLoading = props.loading;
+  var articles = props.articles || [];
   return (
     <div style={{ borderLeft: "3px solid " + s.b, background: s.bg, borderRadius: "0 8px 8px 0", padding: "8px 12px", marginBottom: 8, opacity: isLoading ? 0.6 : 1 }}>
-      <div style={{ display: "inline-block", padding: "2px 8px", borderRadius: 4, background: s.lb, color: "white", fontSize: 9, fontWeight: 600, marginBottom: 6 }}>{s.l}</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+        <div style={{ display: "inline-block", padding: "2px 8px", borderRadius: 4, background: s.lb, color: "white", fontSize: 9, fontWeight: 600 }}>{s.l}</div>
+        {props.totalFound > 0 && <span style={{ fontSize: 9, color: "#64748b" }}>{props.totalFound} träffar på PubMed</span>}
+      </div>
       <div style={{ fontSize: 12.5, lineHeight: 1.65, color: "#1e293b" }}>
         {isLoading ? (
           <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#94a3b8", fontSize: 11 }}>
@@ -132,6 +179,21 @@ function Section(props) {
           <Paras text={props.text} />
         )}
       </div>
+      {articles.length > 0 && (
+        <div style={{ marginTop: 6, paddingTop: 6, borderTop: "1px solid " + s.b + "30" }}>
+          <div style={{ fontSize: 9, color: "#64748b", marginBottom: 4, fontWeight: 600 }}>KÄLLOR:</div>
+          {articles.map(function(a, i) {
+            return (
+              <div key={i} style={{ fontSize: 10, lineHeight: 1.4, marginBottom: 3 }}>
+                <a href={a.url} target="_blank" rel="noopener noreferrer" style={{ color: "#065f46", textDecoration: "none" }}>
+                  {a.authors} ({a.year}) — {a.title}
+                </a>
+                <span style={{ color: "#94a3b8" }}> — {a.journal}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -251,7 +313,7 @@ export default function App() {
 
     // ===== STEG 1: Kohortanalys (snabbt, inga verktyg) =====
     var kohortPrompt = (currentMode === "viz") ? PROMPT_KOHORT_SHORT : PROMPT_KOHORT;
-    apiCall(kohortPrompt, q, ctrl.signal, false)
+    apiCall(kohortPrompt, q, ctrl.signal)
     .then(function(kohortText) {
       setSteps(function(prev) {
         var next = Object.assign({}, prev);
@@ -259,18 +321,22 @@ export default function App() {
         return next;
       });
 
-      // ===== STEG 2: PubMed-sökning (web_search, riktat mot PubMed) =====
-      var pubmedQ = "site:pubmed.ncbi.nlm.nih.gov " + q + " prostate cancer diabetes";
-      return apiCall(PROMPT_PUBMED, pubmedQ, ctrl.signal, true).then(function(pubmedText) {
+      // ===== STEG 2: PubMed E-utilities (direkt, ingen web_search) =====
+      return pubmedCall(q, ctrl.signal).then(function(pubmedResult) {
         setSteps(function(prev) {
           var next = Object.assign({}, prev);
-          next[msgIdx] = Object.assign({}, next[msgIdx], { pubmed: pubmedText, loading: "syntes" });
+          next[msgIdx] = Object.assign({}, next[msgIdx], {
+            pubmed: pubmedResult.summary,
+            articles: pubmedResult.articles,
+            totalFound: pubmedResult.totalFound,
+            loading: "syntes"
+          });
           return next;
         });
 
         // ===== STEG 3: Sammanvägd bedömning (baserad på steg 1+2) =====
-        var syntesPrompt = buildSyntesPrompt(kohortText, pubmedText);
-        return apiCall(syntesPrompt, q, ctrl.signal, false);
+        var syntesPrompt = buildSyntesPrompt(kohortText, pubmedResult.summary);
+        return apiCall(syntesPrompt, q, ctrl.signal);
       });
     })
     .then(function(syntesText) {
@@ -324,7 +390,7 @@ export default function App() {
     return (
       <div style={{ marginBottom: 12 }}>
         {s.kohort ? <Section type="kohort" text={s.kohort} /> : s.loading === "kohort" ? <Section type="kohort" loading={true} loadingText="Analyserar kohortdata…" /> : null}
-        {s.pubmed ? <Section type="pubmed" text={s.pubmed} /> : s.loading === "pubmed" ? <Section type="pubmed" loading={true} loadingText="Söker PubMed-evidens…" /> : null}
+        {s.pubmed ? <Section type="pubmed" text={s.pubmed} articles={s.articles} totalFound={s.totalFound} /> : s.loading === "pubmed" ? <Section type="pubmed" loading={true} loadingText="Söker PubMed (E-utilities)…" /> : null}
         {s.syntes ? <Section type="syntes" text={s.syntes} /> : s.loading === "syntes" ? <Section type="syntes" loading={true} loadingText="Genererar sammanvägd bedömning…" /> : null}
       </div>
     );
@@ -339,7 +405,7 @@ export default function App() {
           <div style={{ fontSize: 10, opacity: 0.6, borderLeft: "1px solid rgba(255,255,255,0.3)", paddingLeft: 8 }}>{d.n} patienter | Prostatacancer + Diabetes | KCHD POC</div>
           <div style={{ marginLeft: "auto", display: "flex", gap: 5 }}>
             <span style={{ fontSize: 8, background: "#2563eb", padding: "2px 7px", borderRadius: 3 }}>Kohortdata (syntetisk)</span>
-            <span style={{ fontSize: 8, background: "#059669", padding: "2px 7px", borderRadius: 3 }}>PubMed (riktig evidens)</span>
+            <span style={{ fontSize: 8, background: "#059669", padding: "2px 7px", borderRadius: 3 }}>PubMed E-utilities (riktig evidens)</span>
             <span style={{ fontSize: 8, background: "#7c3aed", padding: "2px 7px", borderRadius: 3 }}>Sammanvägd bedömning</span>
           </div>
         </div>
