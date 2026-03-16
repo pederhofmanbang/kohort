@@ -264,6 +264,206 @@ function Metric(props) {
   );
 }
 
+
+var PATIENTS = [{"a":64,"r":"intermediate_fav","g":"3+4=7","p":11.0,"t":"EBRT","o":"curative_good","d":"T2","dd":22,"h":62,"b":30.2,"e":76,"ht":1,"rt":1,"nf":1,"kd":1},{"a":57,"r":"intermediate_fav","g":"3+4=7","p":8.0,"t":"RALP","o":"curative_good","d":"T2","dd":7,"h":70,"b":31.2,"e":78,"ht":0,"rt":0,"nf":0,"kd":0},{"a":64,"r":"very_high_metastatic","g":"5+4=9","p":183.0,"t":"EBRT_ADT","o":"deceased_other","d":"T1","dd":27,"h":50,"b":22.3,"e":61,"ht":1,"rt":1,"nf":0,"kd":0},{"a":54,"r":"very_low","g":"3+3=6","p":3.8,"t":"active_surveillance","o":"stable_AS","d":"T1","dd":27,"h":47,"b":26.9,"e":68,"ht":1,"rt":1,"nf":0,"kd":0},{"a":58,"r":"high","g":"4+4=8","p":22.1,"t":"RALP_adj","o":"curative_side_effects","d":"T2","dd":22,"h":68,"b":32.0,"e":60,"ht":1,"rt":1,"nf":1,"kd":0},{"a":60,"r":"intermediate_unfav","g":"4+3=7","p":13.9,"t":"EBRT_ADT","o":"local_progression","d":"T2","dd":16,"h":51,"b":33.2,"e":59,"ht":0,"rt":0,"nf":0,"kd":0},{"a":57,"r":"very_low","g":"3+3=6","p":5.6,"t":"active_surveillance","o":"stable_AS","d":"T2","dd":13,"h":61,"b":32.7,"e":42,"ht":1,"rt":0,"nf":0,"kd":0},{"a":60,"r":"high","g":"4+3=7","p":24.2,"t":"RALP_adj","o":"local_progression","d":"T2","dd":15,"h":55,"b":31.3,"e":84,"ht":0,"rt":0,"nf":0,"kd":0},{"a":53,"r":"low","g":"3+3=6","p":3.5,"t":"active_surveillance","o":"stable_AS","d":"T2","dd":5,"h":58,"b":29.0,"e":84,"ht":1,"rt":0,"nf":1,"kd":0},{"a":52,"r":"high","g":"4+4=8","p":27.7,"t":"EBRT_ADT","o":"local_progression","d":"T2","dd":10,"h":59,"b":28.1,"e":110,"ht":1,"rt":0,"nf":0,"kd":0},{"a":58,"r":"high","g":"4+3=7","p":28.8,"t":"EBRT_ADT","o":"curative_good","d":"T2","dd":21,"h":57,"b":30.7,"e":79,"ht":1,"rt":1,"nf":1,"kd":0},{"a":58,"r":"low","g":"3+3=6","p":5.3,"t":"RALP","o":"biochemical_recurrence","d":"T2","dd":18,"h":63,"b":29.4,"e":77,"ht":0,"rt":1,"nf":0,"kd":0},{"a":50,"r":"intermediate_unfav","g":"3+4=7","p":8.7,"t":"EBRT_ADT","o":"curative_side_effects","d":"T2","dd":12,"h":46,"b":29.5,"e":44,"ht":0,"rt":0,"nf":0,"kd":0},{"a":54,"r":"intermediate_unfav","g":"4+3=7","p":17.9,"t":"RALP","o":"biochemical_recurrence","d":"T2","dd":8,"h":72,"b":29.0,"e":80,"ht":0,"rt":0,"nf":0,"kd":0},{"a":52,"r":"high","g":"4+3=7","p":30.5,"t":"EBRT_ADT","o":"curative_good","d":"T2","dd":8,"h":77,"b":29.9,"e":118,"ht":0,"rt":0,"nf":1,"kd":0},{"a":53,"r":"intermediate_unfav","g":"3+4=7","p":13.5,"t":"EBRT_ADT","o":"local_progression","d":"T1","dd":23,"h":49,"b":26.6,"e":53,"ht":0,"rt":0,"nf":0,"kd":0},{"a":62,"r":"intermediate_unfav","g":"4+3=7","p":6.5,"t":"EBRT_ADT","o":"curative_good","d":"T2","dd":24,"h":46,"b":31.3,"e":69,"ht":1,"rt":1,"nf":0,"kd":0},{"a":52,"r":"very_high_metastatic","g":"5+4=9","p":67.8,"t":"palliative","o":"partial_response","d":"T2","dd":17,"h":69,"b":28.6,"e":71,"ht":0,"rt":0,"nf":0,"kd":0},{"a":65,"r":"high","g":"4+4=8","p":30.6,"t":"EBRT_ADT","o":"local_progression","d":"T2","dd":20,"h":57,"b":29.3,"e":40,"ht":1,"rt":0,"nf":0,"kd":0},{"a":65,"r":"intermediate_fav","g":"3+4=7","p":6.3,"t":"EBRT","o":"curative_good","d":"T1","dd":34,"h":65,"b":26.2,"e":65,"ht":1,"rt":1,"nf":0,"kd":0},{"a":59,"r":"intermediate_fav","g":"3+4=7","p":5.9,"t":"EBRT","o":"curative_side_effects","d":"T2","dd":5,"h":66,"b":30.7,"e":72,"ht":1,"rt":0,"nf":0,"kd":0},{"a":61,"r":"low","g":"3+3=6","p":3.9,"t":"RALP","o":"biochemical_recurrence","d":"T2","dd":22,"h":68,"b":32.6,"e":59,"ht":1,"rt":0,"nf":0,"kd":0},{"a":57,"r":"intermediate_fav","g":"3+4=7","p":6.8,"t":"RALP","o":"curative_good","d":"T1","dd":39,"h":45,"b":30.1,"e":42,"ht":1,"rt":0,"nf":1,"kd":0},{"a":55,"r":"very_high_metastatic","g":"4+4=8","p":119.8,"t":"EBRT_ADT","o":"deceased_cancer","d":"T2","dd":15,"h":59,"b":24.4,"e":70,"ht":1,"rt":1,"nf":0,"kd":0},{"a":61,"r":"high","g":"4+3=7","p":11.4,"t":"RALP_adj","o":"local_progression","d":"T2","dd":23,"h":68,"b":26.3,"e":49,"ht":1,"rt":1,"nf":0,"kd":1},{"a":62,"r":"intermediate_unfav","g":"3+4=7","p":13.6,"t":"EBRT_ADT","o":"curative_good","d":"T2","dd":15,"h":67,"b":31.2,"e":43,"ht":0,"rt":0,"nf":1,"kd":0},{"a":52,"r":"high","g":"4+4=8","p":12.0,"t":"EBRT_ADT","o":"biochemical_recurrence","d":"T1","dd":33,"h":50,"b":24.3,"e":82,"ht":1,"rt":1,"nf":0,"kd":0},{"a":59,"r":"intermediate_fav","g":"3+4=7","p":8.8,"t":"EBRT","o":"biochemical_recurrence","d":"T2","dd":20,"h":71,"b":34.2,"e":66,"ht":1,"rt":0,"nf":0,"kd":0},{"a":55,"r":"very_high_metastatic","g":"5+4=9","p":164.8,"t":"ADT_only","o":"deceased_other","d":"T2","dd":9,"h":71,"b":28.8,"e":65,"ht":1,"rt":0,"nf":0,"kd":0},{"a":60,"r":"intermediate_fav","g":"3+4=7","p":11.7,"t":"EBRT","o":"biochemical_recurrence","d":"T2","dd":17,"h":55,"b":31.6,"e":80,"ht":1,"rt":0,"nf":0,"kd":1},{"a":53,"r":"very_low","g":"3+3=6","p":5.8,"t":"active_surveillance","o":"reclassified_to_treatment","d":"T2","dd":7,"h":63,"b":27.4,"e":93,"ht":1,"rt":0,"nf":0,"kd":0},{"a":53,"r":"intermediate_unfav","g":"4+3=7","p":11.5,"t":"EBRT_ADT","o":"biochemical_recurrence","d":"T2","dd":8,"h":64,"b":30.7,"e":64,"ht":1,"rt":1,"nf":0,"kd":0},{"a":61,"r":"intermediate_unfav","g":"4+3=7","p":14.2,"t":"RALP","o":"local_progression","d":"T2","dd":3,"h":53,"b":30.3,"e":97,"ht":1,"rt":1,"nf":0,"kd":0},{"a":53,"r":"intermediate_unfav","g":"4+3=7","p":8.1,"t":"RALP","o":"biochemical_recurrence","d":"T2","dd":2,"h":42,"b":29.9,"e":77,"ht":0,"rt":0,"nf":0,"kd":0},{"a":59,"r":"high","g":"4+4=8","p":16.2,"t":"EBRT_ADT","o":"local_progression","d":"T1","dd":37,"h":66,"b":24.1,"e":57,"ht":1,"rt":0,"nf":1,"kd":0},{"a":55,"r":"intermediate_fav","g":"3+4=7","p":6.2,"t":"EBRT","o":"curative_good","d":"T1","dd":21,"h":56,"b":20.8,"e":77,"ht":1,"rt":0,"nf":1,"kd":0},{"a":57,"r":"very_high_metastatic","g":"4+4=8","p":120.3,"t":"palliative","o":"progression","d":"T2","dd":12,"h":62,"b":36.1,"e":88,"ht":1,"rt":0,"nf":0,"kd":0},{"a":60,"r":"intermediate_unfav","g":"4+3=7","p":10.3,"t":"EBRT_ADT","o":"curative_side_effects","d":"T2","dd":19,"h":63,"b":30.1,"e":89,"ht":1,"rt":0,"nf":0,"kd":0},{"a":51,"r":"very_high_metastatic","g":"4+5=9","p":131.6,"t":"ADT_only","o":"deceased_cancer","d":"T2","dd":6,"h":61,"b":30.1,"e":73,"ht":0,"rt":0,"nf":0,"kd":0},{"a":65,"r":"low","g":"3+3=6","p":5.8,"t":"RALP","o":"curative_good","d":"T2","dd":8,"h":52,"b":24.7,"e":87,"ht":1,"rt":0,"nf":0,"kd":0},{"a":62,"r":"intermediate_fav","g":"3+4=7","p":7.2,"t":"RALP","o":"curative_good","d":"T2","dd":9,"h":58,"b":28.9,"e":67,"ht":1,"rt":0,"nf":0,"kd":0},{"a":63,"r":"low","g":"3+3=6","p":6.6,"t":"RALP","o":"biochemical_recurrence","d":"T2","dd":13,"h":57,"b":29.0,"e":99,"ht":0,"rt":0,"nf":0,"kd":0},{"a":52,"r":"intermediate_fav","g":"3+4=7","p":8.8,"t":"EBRT","o":"curative_good","d":"T2","dd":13,"h":55,"b":28.3,"e":81,"ht":1,"rt":0,"nf":0,"kd":0},{"a":64,"r":"intermediate_fav","g":"3+4=7","p":8.9,"t":"EBRT","o":"curative_good","d":"T2","dd":20,"h":58,"b":30.5,"e":77,"ht":1,"rt":0,"nf":0,"kd":0},{"a":59,"r":"low","g":"3+3=6","p":6.0,"t":"active_surveillance","o":"stable_AS","d":"T2","dd":14,"h":66,"b":31.7,"e":49,"ht":1,"rt":0,"nf":0,"kd":1},{"a":51,"r":"high","g":"4+4=8","p":26.2,"t":"EBRT_ADT","o":"biochemical_recurrence","d":"T1","dd":16,"h":60,"b":29.2,"e":94,"ht":0,"rt":1,"nf":0,"kd":0},{"a":52,"r":"intermediate_unfav","g":"3+4=7","p":9.9,"t":"EBRT_ADT","o":"biochemical_recurrence","d":"T2","dd":9,"h":53,"b":24.2,"e":70,"ht":1,"rt":0,"nf":1,"kd":0},{"a":59,"r":"intermediate_unfav","g":"3+4=7","p":8.7,"t":"EBRT_ADT","o":"curative_side_effects","d":"T2","dd":22,"h":55,"b":31.8,"e":82,"ht":1,"rt":0,"nf":0,"kd":1},{"a":52,"r":"very_low","g":"3+3=6","p":5.5,"t":"active_surveillance","o":"stable_AS","d":"T2","dd":8,"h":63,"b":25.5,"e":63,"ht":0,"rt":0,"nf":0,"kd":0},{"a":62,"r":"intermediate_fav","g":"3+4=7","p":7.2,"t":"EBRT","o":"curative_good","d":"T2","dd":14,"h":65,"b":26.4,"e":73,"ht":1,"rt":1,"nf":0,"kd":1},{"a":57,"r":"very_high_metastatic","g":"5+4=9","p":121.5,"t":"ADT_chemo","o":"deceased_other","d":"T2","dd":10,"h":66,"b":29.1,"e":77,"ht":1,"rt":0,"nf":0,"kd":0},{"a":59,"r":"intermediate_unfav","g":"3+4=7","p":13.1,"t":"RALP","o":"curative_side_effects","d":"T2","dd":17,"h":55,"b":31.7,"e":86,"ht":0,"rt":0,"nf":0,"kd":1},{"a":56,"r":"very_low","g":"3+3=6","p":2.7,"t":"active_surveillance","o":"stable_AS","d":"T2","dd":14,"h":70,"b":29.4,"e":69,"ht":1,"rt":0,"nf":0,"kd":1},{"a":57,"r":"intermediate_unfav","g":"4+3=7","p":10.7,"t":"EBRT_ADT","o":"local_progression","d":"T2","dd":5,"h":54,"b":32.1,"e":77,"ht":0,"rt":0,"nf":0,"kd":0},{"a":54,"r":"low","g":"3+3=6","p":3.0,"t":"active_surveillance","o":"stable_AS","d":"T2","dd":10,"h":61,"b":30.7,"e":69,"ht":1,"rt":1,"nf":1,"kd":0},{"a":60,"r":"intermediate_fav","g":"3+4=7","p":6.8,"t":"RALP","o":"curative_good","d":"T2","dd":15,"h":48,"b":29.6,"e":54,"ht":1,"rt":0,"nf":1,"kd":0},{"a":53,"r":"intermediate_unfav","g":"4+3=7","p":7.2,"t":"RALP","o":"curative_side_effects","d":"T1","dd":19,"h":53,"b":20.5,"e":70,"ht":0,"rt":1,"nf":0,"kd":0},{"a":62,"r":"high","g":"4+3=7","p":17.7,"t":"EBRT_ADT","o":"local_progression","d":"T2","dd":12,"h":64,"b":32.3,"e":90,"ht":1,"rt":0,"nf":0,"kd":1},{"a":65,"r":"low","g":"3+3=6","p":6.5,"t":"RALP","o":"biochemical_recurrence","d":"T2","dd":18,"h":68,"b":33.2,"e":90,"ht":1,"rt":0,"nf":1,"kd":0},{"a":61,"r":"intermediate_unfav","g":"3+4=7","p":8.0,"t":"RALP","o":"curative_side_effects","d":"T1","dd":24,"h":69,"b":24.4,"e":56,"ht":1,"rt":0,"nf":0,"kd":0},{"a":61,"r":"low","g":"3+3=6","p":6.3,"t":"RALP","o":"curative_good","d":"T2","dd":23,"h":51,"b":30.3,"e":86,"ht":1,"rt":0,"nf":0,"kd":0},{"a":59,"r":"very_low","g":"3+3=6","p":5.5,"t":"active_surveillance","o":"reclassified_to_treatment","d":"T2","dd":23,"h":51,"b":27.1,"e":75,"ht":1,"rt":1,"nf":0,"kd":0},{"a":61,"r":"very_low","g":"3+3=6","p":2.7,"t":"active_surveillance","o":"stable_AS","d":"T2","dd":14,"h":51,"b":29.9,"e":64,"ht":1,"rt":0,"nf":0,"kd":0},{"a":53,"r":"high","g":"4+4=8","p":33.4,"t":"EBRT_ADT","o":"biochemical_recurrence","d":"T2","dd":15,"h":54,"b":31.7,"e":61,"ht":1,"rt":0,"nf":0,"kd":0},{"a":58,"r":"high","g":"4+3=7","p":13.4,"t":"RALP_adj","o":"local_progression","d":"T2","dd":13,"h":64,"b":32.8,"e":71,"ht":0,"rt":0,"nf":0,"kd":0},{"a":51,"r":"low","g":"3+3=6","p":6.8,"t":"active_surveillance","o":"stable_AS","d":"T2","dd":8,"h":56,"b":27.4,"e":80,"ht":0,"rt":0,"nf":0,"kd":0},{"a":53,"r":"high","g":"4+3=7","p":37.8,"t":"RALP_adj","o":"biochemical_recurrence","d":"T2","dd":7,"h":72,"b":23.2,"e":55,"ht":0,"rt":0,"nf":0,"kd":0},{"a":57,"r":"intermediate_fav","g":"3+4=7","p":6.4,"t":"RALP","o":"curative_good","d":"T1","dd":31,"h":51,"b":29.9,"e":74,"ht":0,"rt":1,"nf":0,"kd":0},{"a":62,"r":"very_high_metastatic","g":"4+5=9","p":159.3,"t":"palliative","o":"deceased_cancer","d":"T2","dd":10,"h":76,"b":31.6,"e":85,"ht":1,"rt":0,"nf":0,"kd":0},{"a":56,"r":"low","g":"3+3=6","p":7.5,"t":"RALP","o":"biochemical_recurrence","d":"T2","dd":21,"h":71,"b":33.6,"e":52,"ht":0,"rt":0,"nf":0,"kd":0},{"a":52,"r":"very_low","g":"3+3=6","p":3.6,"t":"active_surveillance","o":"stable_AS","d":"T2","dd":5,"h":50,"b":30.9,"e":42,"ht":0,"rt":1,"nf":0,"kd":0},{"a":55,"r":"very_high_metastatic","g":"4+5=9","p":192.6,"t":"EBRT_ADT","o":"deceased_cancer","d":"T1","dd":31,"h":53,"b":20,"e":76,"ht":1,"rt":1,"nf":0,"kd":0},{"a":52,"r":"intermediate_unfav","g":"4+3=7","p":7.6,"t":"EBRT_ADT","o":"curative_good","d":"T1","dd":32,"h":56,"b":31.2,"e":76,"ht":1,"rt":1,"nf":1,"kd":0},{"a":55,"r":"very_high_metastatic","g":"4+4=8","p":166.0,"t":"palliative","o":"deceased_other","d":"T1","dd":24,"h":53,"b":23.1,"e":74,"ht":1,"rt":1,"nf":0,"kd":0},{"a":50,"r":"intermediate_unfav","g":"3+4=7","p":10.6,"t":"EBRT_ADT","o":"local_progression","d":"T2","dd":8,"h":51,"b":27.9,"e":73,"ht":0,"rt":0,"nf":0,"kd":0},{"a":53,"r":"very_high_metastatic","g":"5+4=9","p":94.4,"t":"ADT_chemo","o":"deceased_cancer","d":"T2","dd":3,"h":62,"b":25.4,"e":66,"ht":0,"rt":0,"nf":0,"kd":0},{"a":60,"r":"intermediate_fav","g":"3+4=7","p":11.5,"t":"RALP","o":"curative_good","d":"T2","dd":5,"h":64,"b":30.0,"e":77,"ht":0,"rt":0,"nf":0,"kd":0},{"a":56,"r":"high","g":"4+4=8","p":29.0,"t":"RALP_adj","o":"curative_side_effects","d":"T2","dd":21,"h":56,"b":30.5,"e":64,"ht":1,"rt":0,"nf":0,"kd":0},{"a":56,"r":"high","g":"4+4=8","p":11.0,"t":"EBRT_ADT","o":"curative_good","d":"T2","dd":14,"h":65,"b":27.6,"e":74,"ht":1,"rt":0,"nf":0,"kd":0},{"a":58,"r":"high","g":"4+4=8","p":13.0,"t":"EBRT_ADT","o":"curative_side_effects","d":"T2","dd":19,"h":71,"b":31.0,"e":58,"ht":1,"rt":0,"nf":0,"kd":0},{"a":59,"r":"intermediate_unfav","g":"4+3=7","p":8.0,"t":"EBRT_ADT","o":"curative_good","d":"T2","dd":19,"h":45,"b":24.7,"e":80,"ht":1,"rt":1,"nf":1,"kd":0},{"a":51,"r":"intermediate_fav","g":"3+4=7","p":8.7,"t":"RALP","o":"curative_side_effects","d":"T2","dd":9,"h":54,"b":30.0,"e":77,"ht":1,"rt":0,"nf":0,"kd":0},{"a":52,"r":"intermediate_fav","g":"3+4=7","p":6.9,"t":"RALP","o":"curative_side_effects","d":"T2","dd":9,"h":56,"b":34.8,"e":97,"ht":0,"rt":0,"nf":1,"kd":0},{"a":58,"r":"very_high_metastatic","g":"4+4=8","p":125.2,"t":"ADT_chemo","o":"partial_response","d":"T2","dd":16,"h":68,"b":29.3,"e":64,"ht":0,"rt":0,"nf":0,"kd":0},{"a":65,"r":"very_high_metastatic","g":"5+4=9","p":159.7,"t":"ADT_chemo","o":"partial_response","d":"T2","dd":5,"h":54,"b":27.8,"e":82,"ht":1,"rt":0,"nf":1,"kd":0},{"a":52,"r":"very_low","g":"3+3=6","p":3.2,"t":"active_surveillance","o":"stable_AS","d":"T2","dd":16,"h":54,"b":31.5,"e":93,"ht":1,"rt":0,"nf":0,"kd":0},{"a":55,"r":"intermediate_unfav","g":"3+4=7","p":10.3,"t":"RALP","o":"curative_side_effects","d":"T2","dd":4,"h":57,"b":31.5,"e":70,"ht":0,"rt":0,"nf":0,"kd":0},{"a":56,"r":"high","g":"4+3=7","p":30.9,"t":"EBRT_ADT","o":"curative_side_effects","d":"T2","dd":6,"h":61,"b":32.9,"e":82,"ht":1,"rt":1,"nf":0,"kd":0},{"a":57,"r":"low","g":"3+3=6","p":4.7,"t":"active_surveillance","o":"stable_AS","d":"T2","dd":9,"h":50,"b":36.1,"e":81,"ht":0,"rt":1,"nf":0,"kd":0},{"a":51,"r":"high","g":"4+3=7","p":25.0,"t":"EBRT_ADT","o":"biochemical_recurrence","d":"T2","dd":12,"h":72,"b":27.5,"e":91,"ht":1,"rt":1,"nf":0,"kd":0},{"a":60,"r":"very_high_metastatic","g":"5+4=9","p":157.8,"t":"palliative","o":"deceased_cancer","d":"T2","dd":23,"h":58,"b":26.4,"e":79,"ht":1,"rt":0,"nf":1,"kd":1},{"a":52,"r":"low","g":"3+3=6","p":5.5,"t":"RALP","o":"curative_good","d":"T2","dd":2,"h":76,"b":33.6,"e":79,"ht":0,"rt":0,"nf":0,"kd":0},{"a":59,"r":"low","g":"3+3=6","p":3.5,"t":"active_surveillance","o":"reclassified_to_treatment","d":"T2","dd":15,"h":57,"b":29.3,"e":73,"ht":1,"rt":0,"nf":0,"kd":1},{"a":50,"r":"intermediate_fav","g":"3+4=7","p":5.6,"t":"RALP","o":"curative_side_effects","d":"T2","dd":8,"h":57,"b":30.4,"e":67,"ht":0,"rt":0,"nf":0,"kd":0},{"a":52,"r":"intermediate_fav","g":"3+4=7","p":9.3,"t":"RALP","o":"curative_good","d":"T2","dd":14,"h":57,"b":27.7,"e":72,"ht":1,"rt":0,"nf":0,"kd":0},{"a":60,"r":"intermediate_fav","g":"3+4=7","p":10.8,"t":"EBRT","o":"curative_side_effects","d":"T2","dd":24,"h":61,"b":32.1,"e":58,"ht":1,"rt":0,"nf":1,"kd":1},{"a":54,"r":"very_high_metastatic","g":"5+4=9","p":69.1,"t":"ADT_only","o":"partial_response","d":"T2","dd":3,"h":57,"b":32.5,"e":75,"ht":1,"rt":0,"nf":0,"kd":0},{"a":51,"r":"very_low","g":"3+3=6","p":4.9,"t":"active_surveillance","o":"stable_AS","d":"T2","dd":2,"h":65,"b":28.0,"e":92,"ht":0,"rt":0,"nf":0,"kd":0},{"a":64,"r":"low","g":"3+3=6","p":4.0,"t":"RALP","o":"curative_good","d":"T2","dd":22,"h":51,"b":27.4,"e":78,"ht":1,"rt":1,"nf":0,"kd":1},{"a":54,"r":"high","g":"4+4=8","p":18.7,"t":"RALP_adj","o":"biochemical_recurrence","d":"T2","dd":2,"h":54,"b":32.0,"e":51,"ht":0,"rt":0,"nf":0,"kd":0}];
+
+// ========== KOHORTDATA TAB ==========
+var FIELD_LABELS = {
+  a: "Ålder", r: "Riskgrupp", g: "Gleason", p: "PSA vid diagnos",
+  t: "Behandling", o: "Utfall", d: "Diabetestyp", dd: "Diabetesduration (år)",
+  h: "HbA1c (mmol/mol)", b: "BMI", e: "eGFR",
+  ht: "Hypertoni", rt: "Retinopati", nf: "Nefropati", kd: "Kardiovaskulär sjukdom"
+};
+var CATEGORICAL = ["r","g","t","o","d"];
+var NUMERIC = ["a","p","dd","h","b","e"];
+var BINARY = ["ht","rt","nf","kd"];
+
+function groupBy(field) {
+  var counts = {};
+  PATIENTS.forEach(function(p) {
+    var val = String(p[field]);
+    counts[val] = (counts[val] || 0) + 1;
+  });
+  return Object.keys(counts).sort().map(function(k) { return { name: k, value: counts[k] }; });
+}
+
+function numericByGroup(numField, catField) {
+  var groups = {};
+  PATIENTS.forEach(function(p) {
+    var g = String(p[catField]);
+    if (!groups[g]) groups[g] = [];
+    groups[g].push(p[numField]);
+  });
+  return Object.keys(groups).sort().map(function(k) {
+    var vals = groups[k];
+    var mean = vals.reduce(function(s,v){return s+v;}, 0) / vals.length;
+    return { name: k, value: Math.round(mean * 10) / 10, n: vals.length };
+  });
+}
+
+function numericHistogram(field) {
+  var vals = PATIENTS.map(function(p) { return p[field]; });
+  var min = Math.min.apply(null, vals);
+  var max = Math.max.apply(null, vals);
+  var range = max - min;
+  var binCount = 8;
+  var binSize = Math.ceil(range / binCount);
+  var bins = {};
+  vals.forEach(function(v) {
+    var binStart = Math.floor((v - min) / binSize) * binSize + min;
+    var label = Math.round(binStart) + "-" + Math.round(binStart + binSize);
+    bins[label] = (bins[label] || 0) + 1;
+  });
+  return Object.keys(bins).map(function(k) { return { name: k, value: bins[k] }; });
+}
+
+function KohortDataTab() {
+  var catFieldS = useState("t"); var catField = catFieldS[0]; var setCatField = catFieldS[1];
+  var numFieldS = useState("h"); var numField = numFieldS[0]; var setNumField = numFieldS[1];
+  var distFieldS = useState("a"); var distField = distFieldS[0]; var setDistField = distFieldS[1];
+
+  var presetCharts = [
+    { title: "Cancerriskgrupper", data: CHARTS_DB["riskgrupp"] },
+    { title: "Behandlingsfördelning", data: CHARTS_DB["behandling"] },
+    { title: "Behandlingsutfall", data: CHARTS_DB["utfall"] },
+    { title: "Diabetestyp", data: CHARTS_DB["diabetes"] },
+    { title: "Komorbiditeter", data: CHARTS_DB["komorbiditet"] },
+    { title: "Åldersfördelning", data: CHARTS_DB["alder"] }
+  ];
+
+  var customGroupData = numericByGroup(numField, catField);
+  var customDistData = CATEGORICAL.indexOf(distField) >= 0 || BINARY.indexOf(distField) >= 0
+    ? groupBy(distField)
+    : numericHistogram(distField);
+
+  var selStyle = { padding: "4px 8px", borderRadius: 4, border: "1px solid #cbd5e1", fontSize: 11, background: "white", color: "#1e293b" };
+
+  return (
+    <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px" }}>
+      <div style={{ fontSize: 14, fontWeight: 600, color: "#1e293b", marginBottom: 4 }}>Kohortöversikt — 100 syntetiska patienter</div>
+      <div style={{ fontSize: 11, color: "#64748b", marginBottom: 12 }}>Män 50–65 år med prostatacancer (C61) och insulinbehandlad diabetes (E10/E11)</div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
+        {presetCharts.map(function(c, i) {
+          return (
+            <div key={i} style={{ background: "white", borderRadius: 8, border: "1px solid #e2e8f0", padding: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "#1e293b", marginBottom: 4, textAlign: "center" }}>{c.title}</div>
+              <ChartVis data={c.data} />
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", marginBottom: 8, borderTop: "1px solid #e2e8f0", paddingTop: 12 }}>Utforska datan själv</div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div style={{ background: "white", borderRadius: 8, border: "1px solid #e2e8f0", padding: 12 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: "#1e293b", marginBottom: 8 }}>Medelvärde per grupp</div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <span style={{ fontSize: 10, color: "#64748b" }}>Visa</span>
+            <select value={numField} onChange={function(e){setNumField(e.target.value);}} style={selStyle}>
+              {NUMERIC.map(function(f){return <option key={f} value={f}>{FIELD_LABELS[f]}</option>;})}
+            </select>
+            <span style={{ fontSize: 10, color: "#64748b" }}>per</span>
+            <select value={catField} onChange={function(e){setCatField(e.target.value);}} style={selStyle}>
+              {CATEGORICAL.map(function(f){return <option key={f} value={f}>{FIELD_LABELS[f]}</option>;})}
+            </select>
+          </div>
+          <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 4 }}>Medel {FIELD_LABELS[numField]} per {FIELD_LABELS[catField].toLowerCase()}</div>
+          <ChartVis data={{ chartType: "bar", title: "", data: customGroupData }} />
+        </div>
+
+        <div style={{ background: "white", borderRadius: 8, border: "1px solid #e2e8f0", padding: 12 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: "#1e293b", marginBottom: 8 }}>Fördelning</div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "center" }}>
+            <span style={{ fontSize: 10, color: "#64748b" }}>Visa fördelning av</span>
+            <select value={distField} onChange={function(e){setDistField(e.target.value);}} style={selStyle}>
+              {CATEGORICAL.concat(NUMERIC).concat(BINARY).map(function(f){return <option key={f} value={f}>{FIELD_LABELS[f]}</option>;})}
+            </select>
+          </div>
+          <ChartVis data={{ chartType: CATEGORICAL.indexOf(distField) >= 0 ? "pie" : "bar", title: "", data: customDistData }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ========== LATHUND TAB ==========
+function LathundTab() {
+  return (
+    <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
+      <svg width="100%" viewBox="0 0 680 600" style={{ maxWidth: 700, margin: "0 auto", display: "block" }}>
+        <text style={{ fontSize: 15, fontWeight: 600, fill: "var(--color-text-primary, #1e293b)" }} x="340" y="28" textAnchor="middle">Så fungerar kohortanalysverktyget</text>
+        <text style={{ fontSize: 11, fill: "var(--color-text-secondary, #64748b)" }} x="340" y="46" textAnchor="middle">Vad som händer när du ställer en fråga</text>
+
+        <rect x="200" y="64" width="280" height="40" rx="8" fill="#e2e8f0" stroke="#94a3b8" strokeWidth="0.5"/>
+        <text style={{ fontSize: 13, fontWeight: 600, fill: "#1e293b" }} x="340" y="88" textAnchor="middle">Din fråga</text>
+
+        <line x1="340" y1="104" x2="340" y2="128" stroke="#94a3b8" strokeWidth="0.5"/>
+        <path d="M340 128 L130 128 L130 156" fill="none" stroke="#2563eb" strokeWidth="1"/>
+        <line x1="340" y1="128" x2="340" y2="156" stroke="#94a3b8" strokeWidth="1"/>
+        <path d="M340 128 L550 128 L550 156" fill="none" stroke="#059669" strokeWidth="1"/>
+
+        <rect x="40" y="160" width="180" height="52" rx="8" fill="#E6F1FB" stroke="#2563eb" strokeWidth="0.5"/>
+        <text style={{ fontSize: 12, fontWeight: 600, fill: "#0C447C" }} x="130" y="182" textAnchor="middle">Steg 1: Kohort</text>
+        <text style={{ fontSize: 10, fill: "#185FA5" }} x="130" y="198" textAnchor="middle">Claude API, ~3 sek</text>
+
+        <rect x="255" y="160" width="170" height="52" rx="8" fill="#f1f5f9" stroke="#94a3b8" strokeWidth="0.5"/>
+        <text style={{ fontSize: 12, fontWeight: 600, fill: "#334155" }} x="340" y="182" textAnchor="middle">Diagram</text>
+        <text style={{ fontSize: 10, fill: "#64748b" }} x="340" y="198" textAnchor="middle">Lokalt, direkt</text>
+
+        <rect x="460" y="160" width="180" height="52" rx="8" fill="#E1F5EE" stroke="#059669" strokeWidth="0.5"/>
+        <text style={{ fontSize: 12, fontWeight: 600, fill: "#04342C" }} x="550" y="182" textAnchor="middle">Steg 2: PubMed</text>
+        <text style={{ fontSize: 10, fill: "#0F6E56" }} x="550" y="198" textAnchor="middle">E-utilities, ~5 sek</text>
+
+        <path d="M130 212 L130 268 L222 268" fill="none" stroke="#7c3aed" strokeWidth="1"/>
+        <path d="M550 212 L550 268 L458 268" fill="none" stroke="#7c3aed" strokeWidth="1"/>
+
+        <rect x="222" y="248" width="236" height="52" rx="8" fill="#FAF5FF" stroke="#7c3aed" strokeWidth="0.5"/>
+        <text style={{ fontSize: 12, fontWeight: 600, fill: "#26215C" }} x="340" y="270" textAnchor="middle">Steg 3: Sammanvägd bedömning</text>
+        <text style={{ fontSize: 10, fill: "#534AB7" }} x="340" y="286" textAnchor="middle">Claude API, ~3 sek</text>
+
+        <line x1="340" y1="300" x2="340" y2="330" stroke="#94a3b8" strokeWidth="0.5"/>
+
+        <rect x="40" y="334" width="600" height="250" rx="10" fill="none" stroke="#cbd5e1" strokeWidth="0.5" strokeDasharray="4 3"/>
+        <text style={{ fontSize: 10, fill: "#94a3b8" }} x="340" y="354" textAnchor="middle">Resultat som visas stegvis i gränssnittet</text>
+
+        <rect x="60" y="370" width="270" height="40" rx="6" fill="#E6F1FB" stroke="#2563eb" strokeWidth="0.5"/>
+        <rect x="60" y="370" width="4" height="40" fill="#2563eb"/>
+        <text style={{ fontSize: 10, fontWeight: 600, fill: "#0C447C" }} x="76" y="386">■ VÅR KOHORTDATA</text>
+        <text style={{ fontSize: 9, fill: "#185FA5" }} x="76" y="400">Siffror från 100 patienter</text>
+
+        <rect x="350" y="370" width="270" height="40" rx="6" fill="#E1F5EE" stroke="#059669" strokeWidth="0.5"/>
+        <rect x="350" y="370" width="4" height="40" fill="#059669"/>
+        <text style={{ fontSize: 10, fontWeight: 600, fill: "#04342C" }} x="366" y="386">◆ PUBLICERAD EVIDENS</text>
+        <text style={{ fontSize: 9, fill: "#0F6E56" }} x="366" y="400">PubMed-artiklar + sammanfattning</text>
+
+        <rect x="60" y="422" width="560" height="40" rx="6" fill="#FAF5FF" stroke="#7c3aed" strokeWidth="0.5"/>
+        <rect x="60" y="422" width="4" height="40" fill="#7c3aed"/>
+        <text style={{ fontSize: 10, fontWeight: 600, fill: "#26215C" }} x="76" y="438">▶ SAMMANVÄGD BEDÖMNING</text>
+        <text style={{ fontSize: 9, fill: "#534AB7" }} x="76" y="452">Kohort + evidens → kliniska rekommendationer</text>
+
+        <rect x="60" y="474" width="560" height="40" rx="6" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="0.5"/>
+        <rect x="60" y="474" width="4" height="40" fill="#94a3b8"/>
+        <text style={{ fontSize: 10, fontWeight: 600, fill: "#334155" }} x="76" y="490">☰ DIAGRAM</text>
+        <text style={{ fontSize: 9, fill: "#64748b" }} x="76" y="504">15 förberäknade diagramtyper, visas omedelbart</text>
+
+        <text style={{ fontSize: 10, fill: "#94a3b8" }} x="340" y="544" textAnchor="middle">Blått syns efter ~3 sek · Grönt efter ~8 sek · Lila efter ~11 sek · Diagram direkt</text>
+        <text style={{ fontSize: 10, fill: "#94a3b8" }} x="340" y="562" textAnchor="middle">Du väljer källa: Kohort | PubMed | Båda + syntes</text>
+      </svg>
+
+      <div style={{ maxWidth: 700, margin: "16px auto", fontSize: 12, lineHeight: 1.7, color: "#334155" }}>
+        <div style={{ fontWeight: 600, marginBottom: 6 }}>Datakällor</div>
+        <div style={{ marginBottom: 8 }}><span style={{ color: "#2563eb", fontWeight: 600 }}>Kohortdata</span> — 100 syntetiska patienter baserade på svensk epidemiologi. Prostatacancer (C61) + insulinbehandlad diabetes (E10/E11). Inkluderar riskgrupper, behandlingar, PSA, HbA1c, komorbiditeter och utfall.</div>
+        <div style={{ marginBottom: 8 }}><span style={{ color: "#059669", fontWeight: 600 }}>PubMed E-utilities</span> — Direkt sökning mot NCBI:s E-utilities API (eutils.ncbi.nlm.nih.gov). Svenska frågor översätts till engelska MeSH-termer. Abstracts hämtas i XML och sammanfattas på svenska av Claude.</div>
+        <div style={{ marginBottom: 8 }}><span style={{ color: "#7c3aed", fontWeight: 600 }}>Sammanvägd bedömning</span> — Claude väger samman kohortanalys och PubMed-evidens till kliniska rekommendationer. Noterar om kohortfynd stämmer med publicerad forskning.</div>
+        <div style={{ fontWeight: 600, marginTop: 12, marginBottom: 6 }}>Backend</div>
+        <div>Vercel serverless functions: /api/chat (proxy till Anthropic Claude API) och /api/pubmed (E-utilities + Claude-sammanfattning). React + Vite frontend. Diagram beräknas lokalt — 15 dataset matchas mot nyckelord.</div>
+      </div>
+    </div>
+  );
+}
+
 // ========== MAIN APP ==========
 export default function App() {
   var msgsS = useState([]); var msgs = msgsS[0]; var setMsgs = msgsS[1];
@@ -273,10 +473,9 @@ export default function App() {
   var modeS = useState("text"); var mode = modeS[0]; var setMode = modeS[1];
   var srcS = useState("both"); var src = srcS[0]; var setSrc = srcS[1];
   var copiedS = useState(false); var copied = copiedS[0]; var setCopied = copiedS[1];
+  var tabS = useState("analys"); var tab = tabS[0]; var setTab = tabS[1];
   var endRef = useRef(null);
   var abortRef = useRef(null);
-
-  // Progressiv svarsstatus per meddelande-index
   var stepsS = useState({}); var steps = stepsS[0]; var setSteps = stepsS[1];
 
   useEffect(function() { if (endRef.current) endRef.current.scrollIntoView({ behavior: "smooth" }); }, [msgs, steps]);
@@ -285,9 +484,7 @@ export default function App() {
   function clear() { stop(); setMsgs([]); setCharts([]); setSteps({}); }
   function doCopy() {
     var parts = [];
-    msgs.forEach(function(m) {
-      if (m.role === "user") parts.push("FRÅGA: " + m.content);
-    });
+    msgs.forEach(function(m) { if (m.role === "user") parts.push("FRÅGA: " + m.content); });
     Object.keys(steps).forEach(function(k) {
       var s = steps[k];
       if (s.kohort) parts.push("KOHORTDATA:\n" + s.kohort);
@@ -295,7 +492,7 @@ export default function App() {
       if (s.syntes) parts.push("SAMMANVÄGD BEDÖMNING:\n" + s.syntes);
       parts.push("---");
     });
-    navigator.clipboard.writeText(parts.join("\n\n")).then(function() { setCopied(true); setTimeout(function() { setCopied(false); }, 2000); });
+    navigator.clipboard.writeText(parts.join("\n\n")).then(function() { setCopied(true); setTimeout(function(){setCopied(false);}, 2000); });
   }
 
   function send(text) {
@@ -453,6 +650,12 @@ export default function App() {
     );
   }
 
+  var TABS = [
+    { k: "analys", l: "Analys", icon: "💬" },
+    { k: "kohort", l: "Kohortdata", icon: "📊" },
+    { k: "lathund", l: "Lathund", icon: "📋" }
+  ];
+
   return (
     <div style={{ fontFamily: "Segoe UI,system-ui,sans-serif", background: "#f0f2f5", height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
@@ -462,130 +665,143 @@ export default function App() {
           <div style={{ fontSize: 10, opacity: 0.6, borderLeft: "1px solid rgba(255,255,255,0.3)", paddingLeft: 8 }}>{d.n} patienter | Prostatacancer + Diabetes | KCHD POC</div>
           <div style={{ marginLeft: "auto", display: "flex", gap: 5 }}>
             <span style={{ fontSize: 8, background: "#2563eb", padding: "2px 7px", borderRadius: 3 }}>Kohortdata (syntetisk)</span>
-            <span style={{ fontSize: 8, background: "#059669", padding: "2px 7px", borderRadius: 3 }}>PubMed E-utilities (riktig evidens)</span>
+            <span style={{ fontSize: 8, background: "#059669", padding: "2px 7px", borderRadius: 3 }}>PubMed E-utilities</span>
             <span style={{ fontSize: 8, background: "#7c3aed", padding: "2px 7px", borderRadius: 3 }}>Sammanvägd bedömning</span>
           </div>
         </div>
+        <div style={{ display: "flex", gap: 0, marginTop: 8 }}>
+          {TABS.map(function(t) {
+            var active = tab === t.k;
+            return <button key={t.k} onClick={function(){setTab(t.k);}} style={{
+              padding: "6px 16px", fontSize: 12, fontWeight: active ? 600 : 400, border: "none", cursor: "pointer",
+              background: active ? "rgba(255,255,255,0.15)" : "transparent",
+              color: active ? "white" : "rgba(255,255,255,0.6)",
+              borderBottom: active ? "2px solid white" : "2px solid transparent",
+              borderRadius: "4px 4px 0 0"
+            }}>{t.l}</button>;
+          })}
+        </div>
       </div>
 
-      <div style={{ padding: "6px 16px", display: "flex", gap: 6, flexWrap: "wrap", flexShrink: 0 }}>
-        <Metric label="Patienter" value={d.n} sub={"Ålder " + d.demographics.age_range + " år"} />
-        <Metric label="DM typ 1/2" value={(dm.T1 || 0) + "/" + (dm.T2 || 0)} sub="15%/85%" />
-        <Metric label="HbA1c baseline" value={d.diabetes.hba1c_baseline_mean} sub="mmol/mol" color="#b45309" />
-        <Metric label="PSA diagnos" value={d.cancer.psa_at_diagnosis.median} sub="median µg/L" color="#dc2626" />
-        <Metric label="HbA1c ADT-effekt" value={"+" + d.labs_summary.hba1c_change_with_adt} sub="mmol/mol" color="#dc2626" />
-      </div>
+      {tab === "analys" && (
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+          <div style={{ padding: "6px 16px", display: "flex", gap: 6, flexWrap: "wrap", flexShrink: 0 }}>
+            <Metric label="Patienter" value={d.n} sub={"Ålder " + d.demographics.age_range + " år"} />
+            <Metric label="DM typ 1/2" value={(dm.T1 || 0) + "/" + (dm.T2 || 0)} sub="15%/85%" />
+            <Metric label="HbA1c baseline" value={d.diabetes.hba1c_baseline_mean} sub="mmol/mol" color="#b45309" />
+            <Metric label="PSA diagnos" value={d.cancer.psa_at_diagnosis.median} sub="median µg/L" color="#dc2626" />
+            <Metric label="HbA1c ADT-effekt" value={"+" + d.labs_summary.hba1c_change_with_adt} sub="mmol/mol" color="#dc2626" />
+          </div>
 
-      <div style={{ flex: 1, display: "flex", gap: 10, padding: "0 16px 10px", minHeight: 0 }}>
-
-        <div style={{ flex: 3, display: "flex", flexDirection: "column", minWidth: 0 }}>
-          <div style={{ flex: 1, background: "white", borderRadius: 10, border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-
-            <div style={{ padding: "6px 12px", borderBottom: "1px solid #f1f5f9", display: "flex", gap: 14, alignItems: "center", background: "#fafbfc", flexShrink: 0 }}>
-              {[{ c: "#2563eb", t: "Blå = kohort (syntetisk)" }, { c: "#059669", t: "Grön = PubMed (riktig)" }, { c: "#7c3aed", t: "Lila = sammanvägd" }].map(function(l, i) {
-                return <div key={i} style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 7, height: 7, borderRadius: 2, background: l.c }} /><span style={{ fontSize: 9, color: "#64748b" }}>{l.t}</span></div>;
-              })}
-            </div>
-
-            <div style={{ flex: 1, overflowY: "auto", padding: 12, minHeight: 0 }}>
-              {msgs.length === 0 && (
-                <div>
-                  <div style={{ textAlign: "center", color: "#94a3b8", fontSize: 11, marginBottom: 10, marginTop: 4 }}>Ställ en fråga — svaret visas stegvis: kohort (blå) → PubMed (grön) → bedömning (lila)</div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5, justifyContent: "center" }}>
-                    {EXAMPLES.map(function(q, i) {
-                      return <button key={i} onClick={function() { send(q); }} style={{ padding: "6px 9px", borderRadius: 6, border: "1px solid #cbd5e1", background: "white", color: "#334155", fontSize: 10, cursor: "pointer", textAlign: "left", maxWidth: 260, lineHeight: 1.35 }}
-                        onMouseOver={function(e) { e.target.style.borderColor = "#2563eb"; e.target.style.background = "#f8fafc"; }}
-                        onMouseOut={function(e) { e.target.style.borderColor = "#cbd5e1"; e.target.style.background = "white"; }}
-                      >{q}</button>;
-                    })}
+          <div style={{ flex: 1, display: "flex", gap: 10, padding: "0 16px 10px", minHeight: 0 }}>
+            <div style={{ flex: 3, display: "flex", flexDirection: "column", minWidth: 0 }}>
+              <div style={{ flex: 1, background: "white", borderRadius: 10, border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                <div style={{ padding: "6px 12px", borderBottom: "1px solid #f1f5f9", display: "flex", gap: 14, alignItems: "center", background: "#fafbfc", flexShrink: 0 }}>
+                  {[{ c: "#2563eb", t: "Blå = kohort" }, { c: "#059669", t: "Grön = PubMed" }, { c: "#7c3aed", t: "Lila = sammanvägd" }].map(function(l, i) {
+                    return <div key={i} style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 7, height: 7, borderRadius: 2, background: l.c }} /><span style={{ fontSize: 9, color: "#64748b" }}>{l.t}</span></div>;
+                  })}
+                </div>
+                <div style={{ flex: 1, overflowY: "auto", padding: 12, minHeight: 0 }}>
+                  {msgs.length === 0 && (
+                    <div>
+                      <div style={{ textAlign: "center", color: "#94a3b8", fontSize: 11, marginBottom: 10, marginTop: 4 }}>Ställ en fråga — svaret visas stegvis: kohort → PubMed → bedömning</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 5, justifyContent: "center" }}>
+                        {EXAMPLES.map(function(q, i) {
+                          return <button key={i} onClick={function(){send(q);}} style={{ padding: "6px 9px", borderRadius: 6, border: "1px solid #cbd5e1", background: "white", color: "#334155", fontSize: 10, cursor: "pointer", textAlign: "left", maxWidth: 260, lineHeight: 1.35 }}
+                            onMouseOver={function(e){e.target.style.borderColor="#2563eb";e.target.style.background="#f8fafc";}}
+                            onMouseOut={function(e){e.target.style.borderColor="#cbd5e1";e.target.style.background="white";}}
+                          >{q}</button>;
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  {msgs.map(function(msg, i) {
+                    if (msg.role === "user") {
+                      var respIdx = i + 1;
+                      return (
+                        <div key={i}>
+                          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
+                            <div style={{ maxWidth: "85%", padding: "8px 14px", borderRadius: "14px 14px 4px 14px", background: "#1a365d", color: "white", fontSize: 12.5, lineHeight: 1.5 }}>{msg.content}</div>
+                          </div>
+                          {steps[respIdx] && renderResponse(respIdx)}
+                        </div>
+                      );
+                    }
+                    return null;
+                  })}
+                  {loading && !steps[msgs.length] && (
+                    <div style={{ display: "flex", gap: 6, alignItems: "center", padding: "8px 0", color: "#64748b", fontSize: 11 }}>
+                      <div style={{ width: 12, height: 12, borderRadius: "50%", border: "2px solid #e2e8f0", borderTopColor: "#2563eb", animation: "spin 1s linear infinite" }} />
+                      <style>{"@keyframes spin{to{transform:rotate(360deg)}}"}</style>
+                      Startar analys…
+                    </div>
+                  )}
+                  <div ref={endRef} />
+                </div>
+                <div style={{ borderTop: "1px solid #e2e8f0", padding: 8, background: "#fafbfc", flexShrink: 0 }}>
+                  <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+                    <input type="text" value={input} onChange={function(e){setInput(e.target.value);}} onKeyDown={function(e){if(e.key==="Enter")send(input);}}
+                      placeholder="Ställ en fråga — kohortanalys + PubMed-evidens…"
+                      style={{ flex: 1, padding: "8px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: 12, outline: "none", background: "white" }} />
+                    {!loading ? (
+                      <button onClick={function(){send(input);}} disabled={!input.trim()} style={{ padding: "8px 14px", borderRadius: 6, background: !input.trim() ? "#94a3b8" : "#1a365d", color: "white", border: "none", fontSize: 12, fontWeight: 600, cursor: !input.trim() ? "not-allowed" : "pointer" }}>Skicka</button>
+                    ) : (
+                      <button onClick={stop} style={{ padding: "8px 14px", borderRadius: 6, background: "#dc2626", color: "white", border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Stoppa</button>
+                    )}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 10, color: "#94a3b8" }}>Svarsformat:</span>
+                    <div style={{ display: "flex", gap: 0, background: "#e2e8f0", borderRadius: 6, padding: 2 }}>
+                      {[{ k: "text", l: "Bara text" }, { k: "both", l: "Text + diagram" }, { k: "viz", l: "Bara diagram" }].map(function(o) {
+                        return <button key={o.k} onClick={function(){setMode(o.k);}} style={{ padding: "8px 14px", fontSize: 12, fontWeight: 600, borderRadius: 4, border: "none", cursor: "pointer", background: mode === o.k ? "#1a365d" : "transparent", color: mode === o.k ? "white" : "#64748b" }}>{o.l}</button>;
+                      })}
+                    </div>
+                    <span style={{ fontSize: 10, color: "#94a3b8", marginLeft: 4 }}>Källa:</span>
+                    <div style={{ display: "flex", gap: 0, background: "#e2e8f0", borderRadius: 6, padding: 2 }}>
+                      {[
+                        { k: "kohort", l: "Kohort", bg: "#2563eb" },
+                        { k: "pubmed", l: "PubMed", bg: "#059669" },
+                        { k: "both", l: "Båda + syntes", bg: "#7c3aed" }
+                      ].map(function(o) {
+                        var active = src === o.k;
+                        return <button key={o.k} onClick={function(){setSrc(o.k);}} style={{ padding: "8px 14px", fontSize: 12, fontWeight: 600, borderRadius: 4, border: "none", cursor: "pointer", background: active ? o.bg : "transparent", color: active ? "white" : "#64748b" }}>{o.l}</button>;
+                      })}
+                    </div>
+                    <div style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
+                      <button onClick={doCopy} disabled={msgs.length === 0} style={{ padding: "6px 12px", borderRadius: 6, background: copied ? "#059669" : "white", color: copied ? "white" : msgs.length === 0 ? "#cbd5e1" : "#334155", border: "1px solid " + (copied ? "#059669" : "#cbd5e1"), fontSize: 11, fontWeight: 500, cursor: msgs.length === 0 ? "default" : "pointer" }}>{copied ? "Kopierat!" : "Kopiera"}</button>
+                      <button onClick={clear} disabled={msgs.length === 0 && !loading} style={{ padding: "6px 12px", borderRadius: 6, background: "white", color: (msgs.length === 0 && !loading) ? "#cbd5e1" : "#dc2626", border: "1px solid " + ((msgs.length === 0 && !loading) ? "#e2e8f0" : "#fecaca"), fontSize: 11, fontWeight: 500, cursor: (msgs.length === 0 && !loading) ? "default" : "pointer" }}>Rensa chatt</button>
+                    </div>
                   </div>
                 </div>
-              )}
-              {msgs.map(function(msg, i) {
-                if (msg.role === "user") {
-                  var respIdx = i + 1;
-                  return (
-                    <div key={i}>
-                      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
-                        <div style={{ maxWidth: "85%", padding: "8px 14px", borderRadius: "14px 14px 4px 14px", background: "#1a365d", color: "white", fontSize: 12.5, lineHeight: 1.5 }}>{msg.content}</div>
-                      </div>
-                      {steps[respIdx] && renderResponse(respIdx)}
-                    </div>
-                  );
-                }
-                return null;
-              })}
-              {loading && !steps[msgs.length] && (
-                <div style={{ display: "flex", gap: 6, alignItems: "center", padding: "8px 0", color: "#64748b", fontSize: 11 }}>
-                  <div style={{ width: 12, height: 12, borderRadius: "50%", border: "2px solid #e2e8f0", borderTopColor: "#2563eb", animation: "spin 1s linear infinite" }} />
-                  <style>{"@keyframes spin{to{transform:rotate(360deg)}}"}</style>
-                  Startar analys…
-                </div>
-              )}
-              <div ref={endRef} />
-            </div>
-
-            <div style={{ borderTop: "1px solid #e2e8f0", padding: 8, background: "#fafbfc", flexShrink: 0 }}>
-              <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
-                <input type="text" value={input} onChange={function(e) { setInput(e.target.value); }} onKeyDown={function(e) { if (e.key === "Enter") send(input); }}
-                  placeholder="Ställ en fråga — kohortanalys + PubMed-evidens…"
-                  style={{ flex: 1, padding: "8px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: 12, outline: "none", background: "white" }} />
-                {!loading ? (
-                  <button onClick={function() { send(input); }} disabled={!input.trim()} style={{ padding: "8px 14px", borderRadius: 6, background: !input.trim() ? "#94a3b8" : "#1a365d", color: "white", border: "none", fontSize: 12, fontWeight: 600, cursor: !input.trim() ? "not-allowed" : "pointer" }}>Skicka</button>
-                ) : (
-                  <button onClick={stop} style={{ padding: "8px 14px", borderRadius: 6, background: "#dc2626", color: "white", border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Stoppa</button>
-                )}
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 10, color: "#94a3b8" }}>Svarsformat:</span>
-                <div style={{ display: "flex", gap: 0, background: "#e2e8f0", borderRadius: 6, padding: 2 }}>
-                  {[{ k: "text", l: "Bara text" }, { k: "both", l: "Text + diagram" }, { k: "viz", l: "Bara diagram" }].map(function(o) {
-                    return <button key={o.k} onClick={function() { setMode(o.k); }} style={{ padding: "8px 14px", fontSize: 12, fontWeight: 600, borderRadius: 4, border: "none", cursor: "pointer", background: mode === o.k ? "#1a365d" : "transparent", color: mode === o.k ? "white" : "#64748b" }}>{o.l}</button>;
-                  })}
+            </div>
+            <div style={{ flex: 2, display: "flex", flexDirection: "column", minWidth: 0 }}>
+              <div style={{ flex: 1, background: "white", borderRadius: 10, border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                <div style={{ padding: "6px 12px", borderBottom: "1px solid #f1f5f9", background: "#fafbfc", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: "#1e293b" }}>Visualisering</span>
+                  {charts.length > 0 && <span style={{ fontSize: 9, color: "#94a3b8" }}>{charts.length} diagram</span>}
                 </div>
-                <span style={{ fontSize: 10, color: "#94a3b8", marginLeft: 4 }}>Källa:</span>
-                <div style={{ display: "flex", gap: 0, background: "#e2e8f0", borderRadius: 6, padding: 2 }}>
-                  {[
-                    { k: "kohort", l: "Kohort", bg: "#2563eb" },
-                    { k: "pubmed", l: "PubMed", bg: "#059669" },
-                    { k: "both", l: "Båda + syntes", bg: "#7c3aed" }
-                  ].map(function(o) {
-                    var active = src === o.k;
-                    return <button key={o.k} onClick={function() { setSrc(o.k); }} style={{ padding: "8px 14px", fontSize: 12, fontWeight: 600, borderRadius: 4, border: "none", cursor: "pointer", background: active ? o.bg : "transparent", color: active ? "white" : "#64748b" }}>{o.l}</button>;
-                  })}
-                </div>
-                <div style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
-                  <button onClick={doCopy} disabled={msgs.length === 0} style={{ padding: "6px 12px", borderRadius: 6, background: copied ? "#059669" : "white", color: copied ? "white" : msgs.length === 0 ? "#cbd5e1" : "#334155", border: "1px solid " + (copied ? "#059669" : "#cbd5e1"), fontSize: 11, fontWeight: 500, cursor: msgs.length === 0 ? "default" : "pointer" }}>{copied ? "Kopierat!" : "Kopiera"}</button>
-                  <button onClick={clear} disabled={msgs.length === 0 && !loading} style={{ padding: "6px 12px", borderRadius: 6, background: "white", color: (msgs.length === 0 && !loading) ? "#cbd5e1" : "#dc2626", border: "1px solid " + ((msgs.length === 0 && !loading) ? "#e2e8f0" : "#fecaca"), fontSize: 11, fontWeight: 500, cursor: (msgs.length === 0 && !loading) ? "default" : "pointer" }}>Rensa chatt</button>
+                <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+                  {mode === "text" && charts.length === 0 && (
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#94a3b8", fontSize: 12, textAlign: "center", padding: 30 }}>
+                      <div><div style={{ fontSize: 28, marginBottom: 8, opacity: 0.3 }}>☰</div>
+                        <div style={{ fontWeight: 600, marginBottom: 4 }}>Diagram är avstängt</div>
+                        <div style={{ fontSize: 11, opacity: 0.7, lineHeight: 1.5 }}>Välj <strong>Text + diagram</strong> eller <strong>Bara diagram</strong></div></div>
+                    </div>)}
+                  {mode !== "text" && charts.length === 0 && (
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#94a3b8", fontSize: 12, textAlign: "center", padding: 30 }}>
+                      <div><div style={{ fontSize: 28, marginBottom: 8, opacity: 0.3 }}>☰</div><div>Ställ en fråga så genereras ett diagram</div></div>
+                    </div>)}
+                  {charts.map(function(ch, i) { return <div key={i} style={{ borderBottom: i < charts.length - 1 ? "1px solid #f1f5f9" : "none" }}><ChartVis data={ch} /></div>; })}
                 </div>
               </div>
             </div>
           </div>
         </div>
+      )}
 
-        <div style={{ flex: 2, display: "flex", flexDirection: "column", minWidth: 0 }}>
-          <div style={{ flex: 1, background: "white", borderRadius: 10, border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-            <div style={{ padding: "6px 12px", borderBottom: "1px solid #f1f5f9", background: "#fafbfc", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ fontSize: 11, fontWeight: 600, color: "#1e293b" }}>Visualisering</span>
-              {charts.length > 0 && <span style={{ fontSize: 9, color: "#94a3b8" }}>{charts.length} diagram</span>}
-            </div>
-            <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
-              {mode === "text" && charts.length === 0 && (
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#94a3b8", fontSize: 12, textAlign: "center", padding: 30 }}>
-                  <div><div style={{ fontSize: 28, marginBottom: 8, opacity: 0.3 }}>☰</div>
-                    <div style={{ fontWeight: 600, marginBottom: 4 }}>Diagram är avstängt</div>
-                    <div style={{ fontSize: 11, opacity: 0.7, lineHeight: 1.5 }}>Välj <strong>Text + diagram</strong> eller <strong>Bara diagram</strong></div></div>
-                </div>)}
-              {mode !== "text" && charts.length === 0 && (
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#94a3b8", fontSize: 12, textAlign: "center", padding: 30 }}>
-                  <div><div style={{ fontSize: 28, marginBottom: 8, opacity: 0.3 }}>☰</div><div>Ställ en fråga så genereras ett diagram</div></div>
-                </div>)}
-              {charts.map(function(ch, i) { return <div key={i} style={{ borderBottom: i < charts.length - 1 ? "1px solid #f1f5f9" : "none" }}><ChartVis data={ch} /></div>; })}
-            </div>
-          </div>
-        </div>
-
-      </div>
+      {tab === "kohort" && <KohortDataTab />}
+      {tab === "lathund" && <LathundTab />}
 
       <div style={{ padding: "4px 16px 8px", fontSize: 8, color: "#94a3b8", textAlign: "center", flexShrink: 0 }}>
         KCHD / SKR POC | Kohortdata = syntetisk | PubMed-evidens = riktig publicerad forskning | Mars 2026
