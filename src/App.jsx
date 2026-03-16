@@ -10,6 +10,16 @@ var PROMPT_KOHORT = "Du är en klinisk dataanalytiker. Svara på svenska med å�
   + "Analysera kohortdatan baserat på användarens fråga. Ange specifika siffror: antal patienter, procent, medelvärden.\n"
   + "Skriv 4-8 meningar ren löptext. Ingen markdown (inga **, #, punktlistor). Inga taggar.";
 
+var PATIENT_KEY = "Fältnycklar: a=ålder, r=riskgrupp, g=Gleason, p=PSA vid diagnos, t=behandling (EBRT/RALP/EBRT_ADT/active_surveillance/RALP_adj/palliative/ADT_only/ADT_chemo), o=utfall, d=diabetestyp (T1/T2), dd=diabetesduration år, h=HbA1c mmol/mol, b=BMI, e=eGFR, ht=hypertoni(0/1), rt=retinopati(0/1), nf=nefropati(0/1), kd=kardiovaskulär(0/1)";
+
+var PROMPT_KOHORT_DETAIL = "Du är en klinisk dataanalytiker. Svara på svenska med åäö.\n\n"
+  + "KOHORTÖVERSIKT:\n" + JSON.stringify(COHORT) + "\n\n"
+  + PATIENT_KEY + "\n\n"
+  + "INDIVIDUELLA PATIENTER (n=100):\n" + JSON.stringify(PATIENTS) + "\n\n"
+  + "Du har tillgång till ALLA individuella patientdata. Räkna exakt — filtrera arrayen mentalt baserat på frågan.\n"
+  + "Ange exakta antal, lista specifika patienter om relevant (t.ex. 'Patient 4: ålder 54, PSA 3.8, aktiv övervakning').\n"
+  + "Skriv 4-10 meningar ren löptext. Ingen markdown. Inga taggar.";
+
 // PubMed-sökning bygger en MeSH-liknande query från användarens fråga
 var PUBMED_KEYWORDS = {
   "hba1c": "HbA1c glycated hemoglobin",
@@ -553,6 +563,7 @@ export default function App() {
   var chartsS = useState([]); var charts = chartsS[0]; var setCharts = chartsS[1];
   var modeS = useState("text"); var mode = modeS[0]; var setMode = modeS[1];
   var srcS = useState("both"); var src = srcS[0]; var setSrc = srcS[1];
+  var depthS = useState("snabb"); var depth = depthS[0]; var setDepth = depthS[1];
   var copiedS = useState(false); var copied = copiedS[0]; var setCopied = copiedS[1];
   var tabS = useState("analys"); var tab = tabS[0]; var setTab = tabS[1];
   var endRef = useRef(null);
@@ -581,6 +592,7 @@ export default function App() {
     var q = text.trim();
     var currentMode = mode;
     var currentSrc = src;
+    var currentDepth = depth;
     var userMsg = { role: "user", content: q };
     var newMsgs = msgs.concat([userMsg]);
     var msgIdx = newMsgs.length;
@@ -627,7 +639,7 @@ export default function App() {
 
     // ===== BARA KOHORT =====
     if (wantKohort && !wantPubmed) {
-      var kp = (currentMode === "viz") ? PROMPT_KOHORT_SHORT : PROMPT_KOHORT;
+      var kp = (currentMode === "viz") ? PROMPT_KOHORT_SHORT : (currentDepth === "detaljerad") ? PROMPT_KOHORT_DETAIL : PROMPT_KOHORT;
       apiCall(kp, q, ctrl.signal).then(function(kohortText) {
         setSteps(function(prev) {
           var next = Object.assign({}, prev);
@@ -658,7 +670,7 @@ export default function App() {
     }
 
     // ===== BÅDA (kohort → pubmed → syntes) =====
-    var kohortPrompt = (currentMode === "viz") ? PROMPT_KOHORT_SHORT : PROMPT_KOHORT;
+    var kohortPrompt = (currentMode === "viz") ? PROMPT_KOHORT_SHORT : (currentDepth === "detaljerad") ? PROMPT_KOHORT_DETAIL : PROMPT_KOHORT;
     apiCall(kohortPrompt, q, ctrl.signal)
     .then(function(kohortText) {
       setSteps(function(prev) {
@@ -847,6 +859,16 @@ export default function App() {
                       ].map(function(o) {
                         var active = src === o.k;
                         return <button key={o.k} onClick={function(){setSrc(o.k);}} style={{ padding: "8px 14px", fontSize: 12, fontWeight: 600, borderRadius: 4, border: "none", cursor: "pointer", background: active ? o.bg : "transparent", color: active ? "white" : "#64748b" }}>{o.l}</button>;
+                      })}
+                    </div>
+                    <span style={{ fontSize: 10, color: "#94a3b8", marginLeft: 4 }}>Djup:</span>
+                    <div style={{ display: "flex", gap: 0, background: "#e2e8f0", borderRadius: 6, padding: 2 }}>
+                      {[
+                        { k: "snabb", l: "Snabb", desc: "Sammanfattning" },
+                        { k: "detaljerad", l: "Detaljerad", desc: "100 patienter" }
+                      ].map(function(o) {
+                        var active = depth === o.k;
+                        return <button key={o.k} onClick={function(){setDepth(o.k);}} title={o.desc} style={{ padding: "8px 14px", fontSize: 12, fontWeight: 600, borderRadius: 4, border: "none", cursor: "pointer", background: active ? "#b45309" : "transparent", color: active ? "white" : "#64748b" }}>{o.l}</button>;
                       })}
                     </div>
                     <div style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
