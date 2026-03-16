@@ -52,9 +52,13 @@ function pubmedCall(question, signal) {
     headers: { "Content-Type": "application/json" },
     signal: signal,
     body: JSON.stringify({ query: searchQuery, maxResults: 5 })
-  }).then(function(r) { return r.json(); }).then(function(data) {
+  }).then(function(r) {
+    if (!r.ok) return r.text().then(function(t) { throw new Error("PubMed API " + r.status + ": " + t.substring(0, 200)); });
+    return r.json();
+  }).then(function(data) {
+    if (data.error) throw new Error(data.error);
     return {
-      summary: data.summary || "Inga resultat.",
+      summary: data.summary || "Inga artiklar hittades.",
       articles: data.articles || [],
       totalFound: data.totalFound || 0,
       searchQuery: data.searchQuery || searchQuery
@@ -78,22 +82,27 @@ var PROMPT_KOHORT_SHORT = "Du är en klinisk dataanalytiker. Svara på svenska. 
 // ========== DIAGRAMVAL ==========
 function matchChart(question) {
   var q = question.toLowerCase();
+  // Specifika termer FÖRST, generiska SIST
   var rules = [
-    [["hba1c","hba","hormon","adt","metabol","insulin"], "hba1c"],
-    [["psa","psa-respons","tumörmarkör"], "psa"],
-    [["riskgrupp","risk"], "riskgrupp"],
-    [["ralp","strål","operation","prostatektomi","kirurgi"], "ralp_vs_stral"],
-    [["behandling","terapi"], "behandling"],
-    [["utfall","resultat","recidiv","biokemisk","prognos"], "utfall"],
-    [["diabetes","typ 1","typ 2","dm"], "diabetes"],
-    [["sammansättning","översikt","beskriv","kohort"], "sammansattning"],
-    [["komorbid","samsjuklighet"], "komorbiditet"],
-    [["hjärt","kärl","kardio"], "hjart"],
-    [["njur","egfr","kreatinin"], "njurfunktion"],
-    [["ålder","år","demographics"], "alder"],
-    [["läkemedel","medicinering","farmak"], "lakemedel"],
+    [["hba1c","hba"], "hba1c"],
     [["metformin"], "metformin"],
-    [["gleason","isup","grad"], "gleason"],
+    [["gleason","isup"], "gleason"],
+    [["njur","egfr","kreatinin"], "njurfunktion"],
+    [["hjärt","kärl","kardio"], "hjart"],
+    [["komorbid","samsjuklighet"], "komorbiditet"],
+    [["ralp","prostatektomi","kirurgi"], "ralp_vs_stral"],
+    [["strål","ebrt"], "ralp_vs_stral"],
+    [["psa","psa-respons","tumörmarkör"], "psa"],
+    [["adt","hormon","antiandrogen","metabol"], "hba1c"],
+    [["recidiv","biokemisk"], "utfall"],
+    [["riskgrupp"], "riskgrupp"],
+    [["diabetes","typ 1","typ 2","dm","insulin"], "diabetes"],
+    [["läkemedel","medicinering","farmak"], "lakemedel"],
+    [["ålder","demographics"], "alder"],
+    [["utfall","resultat","prognos"], "utfall"],
+    [["behandling","terapi","operation"], "behandling"],
+    [["risk"], "riskgrupp"],
+    [["sammansättning","översikt"], "sammansattning"],
   ];
   for (var i = 0; i < rules.length; i++) {
     for (var j = 0; j < rules[i][0].length; j++) {
@@ -135,9 +144,14 @@ function apiCall(sysPrompt, userMsg, signal) {
     headers: { "Content-Type": "application/json" },
     signal: signal,
     body: JSON.stringify(body)
-  }).then(function(r) { return r.json(); }).then(function(d) {
+  }).then(function(r) {
+    if (!r.ok) return r.text().then(function(t) { throw new Error("API " + r.status + ": " + t.substring(0, 200)); });
+    return r.json();
+  }).then(function(d) {
+    if (d.error) throw new Error(d.error.message || d.error);
     var text = "";
     if (d.content) d.content.forEach(function(b) { if (b.type === "text") text += b.text; });
+    if (!text) throw new Error("Tomt svar från API");
     return cleanMd(text);
   });
 }

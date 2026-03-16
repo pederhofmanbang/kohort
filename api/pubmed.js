@@ -65,41 +65,53 @@ export default async function handler(req, res) {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     let summary = "";
 
+    // Fallback-sammanfattning (används om Claude misslyckas)
+    const fallbackSummary = articles.map(function(a) {
+      return a.authors + " (" + a.year + ") publicerade i " + a.journal + " en studie om " + a.title.substring(0, 100);
+    }).join(". ") + ".";
+
     if (apiKey && articles.length > 0) {
-      const articlesText = articles.map(function(a, i) {
-        return (i + 1) + ". " + a.title + " (" + a.authors + ", " + a.journal + " " + a.year + ")\n"
-          + (a.abstract || "Inget abstract tillgängligt.");
-      }).join("\n\n");
+      try {
+        const articlesText = articles.map(function(a, i) {
+          return (i + 1) + ". " + a.title + " (" + a.authors + ", " + a.journal + " " + a.year + ")\n"
+            + (a.abstract || "Inget abstract tillgängligt.");
+        }).join("\n\n");
 
-      const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01"
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1024,
-          system: "Du är en medicinsk forskare. Svara på svenska med åäö.\n\n"
-            + "Sammanfatta de viktigaste fynden från artiklarna nedan. "
-            + "Citera varje studie med författare och årtal. "
-            + "Skriv 4-8 meningar ren löptext. Ingen markdown.",
-          messages: [{ role: "user", content: articlesText }]
-        })
-      });
-
-      const claudeData = await claudeRes.json();
-      if (claudeData.content) {
-        claudeData.content.forEach(function(b) {
-          if (b.type === "text") summary += b.text;
+        const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": apiKey,
+            "anthropic-version": "2023-06-01"
+          },
+          body: JSON.stringify({
+            model: "claude-sonnet-4-20250514",
+            max_tokens: 1024,
+            system: "Du är en medicinsk forskare. Svara på svenska med åäö.\n\n"
+              + "Sammanfatta de viktigaste fynden från artiklarna nedan. "
+              + "Citera varje studie med författare och årtal. "
+              + "Skriv 4-8 meningar ren löptext. Ingen markdown.",
+            messages: [{ role: "user", content: articlesText }]
+          })
         });
+
+        const claudeData = await claudeRes.json();
+        if (claudeData.content) {
+          claudeData.content.forEach(function(b) {
+            if (b.type === "text") summary += b.text;
+          });
+        }
+        // Om Claude returnerade tomt, logga felet och använd fallback
+        if (!summary) {
+          console.error("Claude returned empty summary. Response:", JSON.stringify(claudeData).substring(0, 500));
+          summary = fallbackSummary;
+        }
+      } catch (claudeError) {
+        console.error("Claude summarization failed:", claudeError.message);
+        summary = fallbackSummary;
       }
     } else if (articles.length > 0) {
-      // Fallback utan Claude — bara lista artiklarna
-      summary = articles.map(function(a) {
-        return a.authors + " (" + a.year + ") i " + a.journal + ": " + a.title;
-      }).join(". ");
+      summary = fallbackSummary;
     }
 
     return res.status(200).json({
