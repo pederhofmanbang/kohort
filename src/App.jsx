@@ -464,6 +464,130 @@ function LathundTab() {
   );
 }
 
+// ========== PUBMED-LANDSKAP TAB ==========
+function PubMedLandskapsTab() {
+  var dataS = useState(null); var data = dataS[0]; var setData = dataS[1];
+  var loadingS = useState(false); var isLoading = loadingS[0]; var setIsLoading = loadingS[1];
+  var errorS = useState(null); var error = errorS[0]; var setError = errorS[1];
+
+  useEffect(function() {
+    if (data || isLoading) return;
+    setIsLoading(true);
+    fetch("/api/pubmed-landscape")
+      .then(function(r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      })
+      .then(function(d) {
+        if (d.error) throw new Error(d.error);
+        setData(d);
+        setIsLoading(false);
+      })
+      .catch(function(err) {
+        setError(err.message);
+        setIsLoading(false);
+      });
+  }, []);
+
+  if (isLoading) return (
+    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ textAlign: "center", color: "#64748b" }}>
+        <div style={{ width: 24, height: 24, borderRadius: "50%", border: "3px solid #e2e8f0", borderTopColor: "#059669", animation: "spin 1s linear infinite", margin: "0 auto 12px" }} />
+        <style>{"@keyframes spin{to{transform:rotate(360deg)}}"}</style>
+        <div style={{ fontSize: 13, fontWeight: 600 }}>Hämtar PubMed-landskapsdata…</div>
+        <div style={{ fontSize: 11, marginTop: 4 }}>~30 sökningar körs parallellt mot E-utilities</div>
+      </div>
+    </div>
+  );
+
+  if (error) return (
+    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ textAlign: "center", color: "#dc2626", padding: 20 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Kunde inte hämta PubMed-data</div>
+        <div style={{ fontSize: 11 }}>{error}</div>
+        <button onClick={function() { setError(null); setData(null); }} style={{ marginTop: 12, padding: "6px 14px", borderRadius: 6, border: "1px solid #fecaca", background: "white", color: "#dc2626", fontSize: 11, cursor: "pointer" }}>Försök igen</button>
+      </div>
+    </div>
+  );
+
+  if (!data) return null;
+
+  var volumeData = (data.volume || []).map(function(v) { return { name: v.label, value: v.count }; });
+  var trendData = (data.trend || []).map(function(t) { return { name: String(t.year), value: t.count }; });
+  var evidenceData = (data.evidence || []).map(function(e) { return { name: e.label, value: e.count }; });
+  var journalData = (data.journals || []).map(function(j) { return { name: j.journal, value: j.count }; });
+  var totalArticles = data.volume && data.volume[0] ? data.volume[0].count : 0;
+
+  return (
+    <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px" }}>
+      <div style={{ fontSize: 14, fontWeight: 600, color: "#1e293b", marginBottom: 2 }}>PubMed-forskningslandskap</div>
+      <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>Kartläggning av publicerad forskning med koppling till kohorten (prostatacancer + diabetes)</div>
+      <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 12 }}>Hämtat {data.meta && data.meta.fetchedAt ? new Date(data.meta.fetchedAt).toLocaleDateString("sv-SE") : ""} via PubMed E-utilities | Basquery: "{data.meta && data.meta.baseQuery}"</div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+
+        <div style={{ background: "white", borderRadius: 8, border: "1px solid #e2e8f0", padding: 12, gridColumn: "1 / -1" }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "#1e293b", marginBottom: 2 }}>Forskningsvolym per delämne</div>
+          <div style={{ fontSize: 10, color: "#64748b", marginBottom: 8 }}>Antal artiklar på PubMed för varje delämne kopplat till kohortens kliniska profil</div>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={volumeData} layout="vertical" margin={{ left: 200, right: 20, top: 5, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis type="number" fontSize={10} />
+              <YAxis type="category" dataKey="name" fontSize={10} width={190} />
+              <Tooltip />
+              <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                {volumeData.map(function(d, i) { return <Cell key={i} fill={COLORS[i % COLORS.length]} />; })}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div style={{ background: "white", borderRadius: 8, border: "1px solid #e2e8f0", padding: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "#1e293b", marginBottom: 2 }}>Publiceringstrend</div>
+          <div style={{ fontSize: 10, color: "#64748b", marginBottom: 8 }}>Artiklar per år ({data.meta && data.meta.yearsRange})</div>
+          <ResponsiveContainer width="100%" height={250}>
+            <LineChart data={trendData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="name" fontSize={9} angle={-45} textAnchor="end" height={50} />
+              <YAxis fontSize={10} />
+              <Tooltip />
+              <Line type="monotone" dataKey="value" stroke="#059669" strokeWidth={2} dot={{ r: 3, fill: "#059669" }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div style={{ background: "white", borderRadius: 8, border: "1px solid #e2e8f0", padding: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "#1e293b", marginBottom: 2 }}>Evidensnivå</div>
+          <div style={{ fontSize: 10, color: "#64748b", marginBottom: 8 }}>Artikeltyper (av ~{totalArticles.toLocaleString()} totalt)</div>
+          <ResponsiveContainer width="100%" height={250}>
+            <PieChart>
+              <Pie data={evidenceData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={function(e) { return e.name.split("(")[0].trim() + " (" + e.value + ")"; }} fontSize={9}>
+                {evidenceData.map(function(d, i) { return <Cell key={i} fill={COLORS[i % COLORS.length]} />; })}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div style={{ background: "white", borderRadius: 8, border: "1px solid #e2e8f0", padding: 12, gridColumn: "1 / -1" }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "#1e293b", marginBottom: 2 }}>Topp-tidskrifter</div>
+          <div style={{ fontSize: 10, color: "#64748b", marginBottom: 8 }}>De 15 tidskrifter som publicerar mest om prostatacancer + diabetes (baserat på 200 senaste artiklarna)</div>
+          <ResponsiveContainer width="100%" height={320}>
+            <BarChart data={journalData} layout="vertical" margin={{ left: 250, right: 20, top: 5, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis type="number" fontSize={10} />
+              <YAxis type="category" dataKey="name" fontSize={9} width={240} />
+              <Tooltip />
+              <Bar dataKey="value" fill="#059669" radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
 // ========== MAIN APP ==========
 export default function App() {
   var msgsS = useState([]); var msgs = msgsS[0]; var setMsgs = msgsS[1];
@@ -653,6 +777,7 @@ export default function App() {
   var TABS = [
     { k: "analys", l: "Analys", icon: "💬" },
     { k: "kohort", l: "Kohortdata", icon: "📊" },
+    { k: "landskap", l: "PubMed-landskap", icon: "🔬" },
     { k: "lathund", l: "Lathund", icon: "📋" }
   ];
 
@@ -801,6 +926,7 @@ export default function App() {
       )}
 
       {tab === "kohort" && <KohortDataTab />}
+      {tab === "landskap" && <PubMedLandskapsTab />}
       {tab === "lathund" && <LathundTab />}
 
       <div style={{ padding: "4px 16px 8px", fontSize: 8, color: "#94a3b8", textAlign: "center", flexShrink: 0 }}>
