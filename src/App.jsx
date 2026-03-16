@@ -257,6 +257,7 @@ export default function App() {
   var loadS = useState(false); var loading = loadS[0]; var setLoading = loadS[1];
   var chartsS = useState([]); var charts = chartsS[0]; var setCharts = chartsS[1];
   var modeS = useState("text"); var mode = modeS[0]; var setMode = modeS[1];
+  var srcS = useState("both"); var src = srcS[0]; var setSrc = srcS[1];
   var copiedS = useState(false); var copied = copiedS[0]; var setCopied = copiedS[1];
   var endRef = useRef(null);
   var abortRef = useRef(null);
@@ -287,9 +288,10 @@ export default function App() {
     if (!text.trim() || loading) return;
     var q = text.trim();
     var currentMode = mode;
+    var currentSrc = src;
     var userMsg = { role: "user", content: q };
     var newMsgs = msgs.concat([userMsg]);
-    var msgIdx = newMsgs.length; // index för denna svarscykel
+    var msgIdx = newMsgs.length;
     setMsgs(newMsgs);
     setInput("");
     setLoading(true);
@@ -304,14 +306,66 @@ export default function App() {
       if (chart) setCharts(function(prev) { return prev.concat([chart]); });
     }
 
+    var wantKohort = (currentSrc === "kohort" || currentSrc === "both");
+    var wantPubmed = (currentSrc === "pubmed" || currentSrc === "both");
+    var wantSyntes = (currentSrc === "both");
+    var firstLoading = wantKohort ? "kohort" : "pubmed";
+
     // Initiera steg-state
     setSteps(function(prev) {
       var next = Object.assign({}, prev);
-      next[msgIdx] = { kohort: null, pubmed: null, syntes: null, mode: currentMode, loading: "kohort" };
+      next[msgIdx] = { kohort: null, pubmed: null, syntes: null, articles: null, totalFound: 0, mode: currentMode, src: currentSrc, loading: firstLoading };
       return next;
     });
 
-    // ===== STEG 1: Kohortanalys (snabbt, inga verktyg) =====
+    function done() { setLoading(false); }
+    function fail(err) {
+      var msg = err.name === "AbortError" ? "Avbruten." : "Fel: " + err.message;
+      setSteps(function(prev) {
+        var next = Object.assign({}, prev);
+        var current = next[msgIdx] || {};
+        next[msgIdx] = Object.assign({}, current, { loading: null });
+        if (wantKohort && !current.kohort) next[msgIdx].kohort = msg;
+        if (wantPubmed && !current.pubmed) next[msgIdx].pubmed = "PubMed-sökning misslyckades: " + msg;
+        if (wantSyntes && current.kohort && current.pubmed && !current.syntes) next[msgIdx].syntes = "Sammanvägning misslyckades: " + msg;
+        return next;
+      });
+      setLoading(false);
+    }
+
+    // ===== BARA KOHORT =====
+    if (wantKohort && !wantPubmed) {
+      var kp = (currentMode === "viz") ? PROMPT_KOHORT_SHORT : PROMPT_KOHORT;
+      apiCall(kp, q, ctrl.signal).then(function(kohortText) {
+        setSteps(function(prev) {
+          var next = Object.assign({}, prev);
+          next[msgIdx] = Object.assign({}, next[msgIdx], { kohort: kohortText, loading: null });
+          return next;
+        });
+        done();
+      }).catch(fail);
+      return;
+    }
+
+    // ===== BARA PUBMED =====
+    if (wantPubmed && !wantKohort) {
+      pubmedCall(q, ctrl.signal).then(function(pubmedResult) {
+        setSteps(function(prev) {
+          var next = Object.assign({}, prev);
+          next[msgIdx] = Object.assign({}, next[msgIdx], {
+            pubmed: pubmedResult.summary,
+            articles: pubmedResult.articles,
+            totalFound: pubmedResult.totalFound,
+            loading: null
+          });
+          return next;
+        });
+        done();
+      }).catch(fail);
+      return;
+    }
+
+    // ===== BÅDA (kohort → pubmed → syntes) =====
     var kohortPrompt = (currentMode === "viz") ? PROMPT_KOHORT_SHORT : PROMPT_KOHORT;
     apiCall(kohortPrompt, q, ctrl.signal)
     .then(function(kohortText) {
@@ -320,8 +374,6 @@ export default function App() {
         next[msgIdx] = Object.assign({}, next[msgIdx], { kohort: kohortText, loading: "pubmed" });
         return next;
       });
-
-      // ===== STEG 2: PubMed E-utilities (direkt, ingen web_search) =====
       return pubmedCall(q, ctrl.signal).then(function(pubmedResult) {
         setSteps(function(prev) {
           var next = Object.assign({}, prev);
@@ -333,8 +385,6 @@ export default function App() {
           });
           return next;
         });
-
-        // ===== STEG 3: Sammanvägd bedömning (baserad på steg 1+2) =====
         var syntesPrompt = buildSyntesPrompt(kohortText, pubmedResult.summary);
         return apiCall(syntesPrompt, q, ctrl.signal);
       });
@@ -345,21 +395,9 @@ export default function App() {
         next[msgIdx] = Object.assign({}, next[msgIdx], { syntes: syntesText, loading: null });
         return next;
       });
-      setLoading(false);
+      done();
     })
-    .catch(function(err) {
-      var msg = err.name === "AbortError" ? "Avbruten." : "Fel: " + err.message;
-      setSteps(function(prev) {
-        var next = Object.assign({}, prev);
-        var current = next[msgIdx] || {};
-        next[msgIdx] = Object.assign({}, current, { loading: null });
-        if (!current.kohort) next[msgIdx].kohort = msg;
-        if (current.kohort && !current.pubmed) next[msgIdx].pubmed = "PubMed-sökning misslyckades: " + msg;
-        if (current.kohort && current.pubmed && !current.syntes) next[msgIdx].syntes = "Sammanvägning misslyckades: " + msg;
-        return next;
-      });
-      setLoading(false);
-    });
+    .catch(fail);
   }
 
   // ========== RENDER ==========
@@ -387,11 +425,16 @@ export default function App() {
       );
     }
 
+    var sc = s.src || "both";
+    var showK = (sc === "kohort" || sc === "both");
+    var showP = (sc === "pubmed" || sc === "both");
+    var showS = (sc === "both");
+
     return (
       <div style={{ marginBottom: 12 }}>
-        {s.kohort ? <Section type="kohort" text={s.kohort} /> : s.loading === "kohort" ? <Section type="kohort" loading={true} loadingText="Analyserar kohortdata…" /> : null}
-        {s.pubmed ? <Section type="pubmed" text={s.pubmed} articles={s.articles} totalFound={s.totalFound} /> : s.loading === "pubmed" ? <Section type="pubmed" loading={true} loadingText="Söker PubMed (E-utilities)…" /> : null}
-        {s.syntes ? <Section type="syntes" text={s.syntes} /> : s.loading === "syntes" ? <Section type="syntes" loading={true} loadingText="Genererar sammanvägd bedömning…" /> : null}
+        {showK && (s.kohort ? <Section type="kohort" text={s.kohort} /> : s.loading === "kohort" ? <Section type="kohort" loading={true} loadingText="Analyserar kohortdata…" /> : null)}
+        {showP && (s.pubmed ? <Section type="pubmed" text={s.pubmed} articles={s.articles} totalFound={s.totalFound} /> : s.loading === "pubmed" ? <Section type="pubmed" loading={true} loadingText="Söker PubMed (E-utilities)…" /> : null)}
+        {showS && (s.syntes ? <Section type="syntes" text={s.syntes} /> : s.loading === "syntes" ? <Section type="syntes" loading={true} loadingText="Genererar sammanvägd bedömning…" /> : null)}
       </div>
     );
   }
@@ -479,11 +522,22 @@ export default function App() {
                   <button onClick={stop} style={{ padding: "8px 14px", borderRadius: 6, background: "#dc2626", color: "white", border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Stoppa</button>
                 )}
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                 <span style={{ fontSize: 10, color: "#94a3b8" }}>Svarsformat:</span>
                 <div style={{ display: "flex", gap: 0, background: "#e2e8f0", borderRadius: 6, padding: 2 }}>
                   {[{ k: "text", l: "Bara text" }, { k: "both", l: "Text + diagram" }, { k: "viz", l: "Bara diagram" }].map(function(o) {
                     return <button key={o.k} onClick={function() { setMode(o.k); }} style={{ padding: "8px 14px", fontSize: 12, fontWeight: 600, borderRadius: 4, border: "none", cursor: "pointer", background: mode === o.k ? "#1a365d" : "transparent", color: mode === o.k ? "white" : "#64748b" }}>{o.l}</button>;
+                  })}
+                </div>
+                <span style={{ fontSize: 10, color: "#94a3b8", marginLeft: 4 }}>Källa:</span>
+                <div style={{ display: "flex", gap: 0, background: "#e2e8f0", borderRadius: 6, padding: 2 }}>
+                  {[
+                    { k: "kohort", l: "Kohort", bg: "#2563eb" },
+                    { k: "pubmed", l: "PubMed", bg: "#059669" },
+                    { k: "both", l: "Båda + syntes", bg: "#7c3aed" }
+                  ].map(function(o) {
+                    var active = src === o.k;
+                    return <button key={o.k} onClick={function() { setSrc(o.k); }} style={{ padding: "8px 14px", fontSize: 12, fontWeight: 600, borderRadius: 4, border: "none", cursor: "pointer", background: active ? o.bg : "transparent", color: active ? "white" : "#64748b" }}>{o.l}</button>;
                   })}
                 </div>
                 <div style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
