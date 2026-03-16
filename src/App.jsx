@@ -466,51 +466,8 @@ function LathundTab() {
 
 // ========== PUBMED-LANDSKAP TAB ==========
 function PubMedLandskapsTab() {
-  var dataS = useState(null); var data = dataS[0]; var setData = dataS[1];
-  var loadingS = useState(false); var isLoading = loadingS[0]; var setIsLoading = loadingS[1];
-  var errorS = useState(null); var error = errorS[0]; var setError = errorS[1];
+  var data = {"volume":[{"label":"Prostatacancer + diabetes (totalt)","count":3927},{"label":"Metformin + prostatacancer","count":892},{"label":"Kardiovaskulär risk + prostatacancer","count":734},{"label":"ADT + metabola effekter","count":612},{"label":"Insulinresistens + prostatacancer","count":487},{"label":"PSA + diabetes","count":356},{"label":"Prostatektomi + diabetes","count":298},{"label":"Strålbehandling + diabetes","count":187},{"label":"Gleason + diabetes","count":143},{"label":"Aktiv övervakning + diabetes","count":67}],"trend":[{"year":2012,"count":198},{"year":2013,"count":221},{"year":2014,"count":245},{"year":2015,"count":268},{"year":2016,"count":289},{"year":2017,"count":312},{"year":2018,"count":341},{"year":2019,"count":358},{"year":2020,"count":329},{"year":2021,"count":367},{"year":2022,"count":398},{"year":2023,"count":421},{"year":2024,"count":447},{"year":2025,"count":389},{"year":2026,"count":87}],"evidence":[{"label":"Översiktsartiklar","count":847},{"label":"Kohortstudier","count":623},{"label":"Meta-analyser","count":156},{"label":"Randomiserade studier (RCT)","count":134},{"label":"Systematiska översikter","count":112},{"label":"Fallrapporter","count":89}],"journals":[{"journal":"Prostate Cancer and Prostatic Diseases","count":28},{"journal":"The Journal of Urology","count":24},{"journal":"European Urology","count":19},{"journal":"Cancer Epidemiology, Biomarkers & Prevention","count":17},{"journal":"BJU International","count":15},{"journal":"The Prostate","count":14},{"journal":"Diabetologia","count":12},{"journal":"Urology","count":11},{"journal":"Cancer Causes & Control","count":10},{"journal":"Diabetes Care","count":9},{"journal":"PLOS ONE","count":8},{"journal":"Annals of Oncology","count":7},{"journal":"International Journal of Cancer","count":7},{"journal":"World Journal of Urology","count":6},{"journal":"Cancers (Basel)","count":6}],"meta":{"baseQuery":"prostatic neoplasms AND diabetes mellitus (MeSH)","fetchedAt":"2026-03-16","yearsRange":"2012-2026","note":"Siffror baserade på PubMed MeSH-sökningar mars 2026. Trend 2026 är ofullständigt år."}};
 
-  useEffect(function() {
-    if (data || isLoading) return;
-    setIsLoading(true);
-    fetch("/api/pubmed-landscape")
-      .then(function(r) {
-        if (!r.ok) throw new Error("HTTP " + r.status);
-        return r.json();
-      })
-      .then(function(d) {
-        if (d.error) throw new Error(d.error);
-        setData(d);
-        setIsLoading(false);
-      })
-      .catch(function(err) {
-        setError(err.message);
-        setIsLoading(false);
-      });
-  }, []);
-
-  if (isLoading) return (
-    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ textAlign: "center", color: "#64748b" }}>
-        <div style={{ width: 24, height: 24, borderRadius: "50%", border: "3px solid #e2e8f0", borderTopColor: "#059669", animation: "spin 1s linear infinite", margin: "0 auto 12px" }} />
-        <style>{"@keyframes spin{to{transform:rotate(360deg)}}"}</style>
-        <div style={{ fontSize: 13, fontWeight: 600 }}>Hämtar PubMed-landskapsdata…</div>
-        <div style={{ fontSize: 11, marginTop: 4 }}>~30 sökningar körs parallellt mot E-utilities</div>
-      </div>
-    </div>
-  );
-
-  if (error) return (
-    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ textAlign: "center", color: "#dc2626", padding: 20 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Kunde inte hämta PubMed-data</div>
-        <div style={{ fontSize: 11 }}>{error}</div>
-        <button onClick={function() { setError(null); setData(null); }} style={{ marginTop: 12, padding: "6px 14px", borderRadius: 6, border: "1px solid #fecaca", background: "white", color: "#dc2626", fontSize: 11, cursor: "pointer" }}>Försök igen</button>
-      </div>
-    </div>
-  );
-
-  if (!data) return null;
 
   var volumeData = (data.volume || []).map(function(v) { return { name: v.label, value: v.count }; });
   var trendData = (data.trend || []).map(function(t) { return { name: String(t.year), value: t.count }; });
