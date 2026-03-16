@@ -1,24 +1,38 @@
-// Vercel serverless function — hämtar PubMed-landskapsdata
-// Alla anrop parallella för snabbhet
-
+// Vercel serverless function — PubMed-landskapsdata
 const EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils";
 
-async function searchCount(query, extra) {
-  var params = new URLSearchParams({
-    db: "pubmed", term: query, rettype: "count", retmode: "json"
-  });
-  if (extra) Object.entries(extra).forEach(function(e) { params.set(e[0], e[1]); });
+function addKey(params) {
   if (process.env.NCBI_API_KEY) params.set("api_key", process.env.NCBI_API_KEY);
+  return params;
+}
+
+async function searchCount(query) {
+  var params = addKey(new URLSearchParams({
+    db: "pubmed", term: query, rettype: "count", retmode: "json"
+  }));
+  var res = await fetch(EUTILS + "/esearch.fcgi?" + params);
+  var data = await res.json();
+  return parseInt(data?.esearchresult?.count || "0");
+}
+
+async function searchCountByYear(query, year) {
+  var params = addKey(new URLSearchParams({
+    db: "pubmed", term: query,
+    rettype: "count", retmode: "json",
+    datetype: "pdat",
+    mindate: String(year),
+    maxdate: String(year)
+  }));
   var res = await fetch(EUTILS + "/esearch.fcgi?" + params);
   var data = await res.json();
   return parseInt(data?.esearchresult?.count || "0");
 }
 
 async function searchIds(query, max) {
-  var params = new URLSearchParams({
-    db: "pubmed", term: query, retmax: String(max || 100), sort: "relevance", retmode: "json"
-  });
-  if (process.env.NCBI_API_KEY) params.set("api_key", process.env.NCBI_API_KEY);
+  var params = addKey(new URLSearchParams({
+    db: "pubmed", term: query, retmax: String(max || 200),
+    sort: "relevance", retmode: "json"
+  }));
   var res = await fetch(EUTILS + "/esearch.fcgi?" + params);
   var data = await res.json();
   return data?.esearchresult?.idlist || [];
@@ -26,10 +40,9 @@ async function searchIds(query, max) {
 
 async function fetchSummaries(pmids) {
   if (!pmids.length) return [];
-  var params = new URLSearchParams({
+  var params = addKey(new URLSearchParams({
     db: "pubmed", id: pmids.join(","), retmode: "json"
-  });
-  if (process.env.NCBI_API_KEY) params.set("api_key", process.env.NCBI_API_KEY);
+  }));
   var res = await fetch(EUTILS + "/esummary.fcgi?" + params);
   var data = await res.json();
   var result = data?.result || {};
@@ -42,66 +55,58 @@ export default async function handler(req, res) {
   }
 
   try {
-    var baseQuery = "prostate cancer diabetes";
-
-    // ===== 1. FORSKNINGSVOLYM PER DELÄMNE (parallella count-sökningar) =====
+    // ===== 1. FORSKNINGSVOLYM — PubMed-optimerade söksträngar =====
     var topics = [
-      { label: "Prostatacancer + diabetes (totalt)", query: "prostate cancer diabetes" },
-      { label: "ADT + metabola effekter", query: "androgen deprivation therapy metabolic diabetes HbA1c" },
-      { label: "Metformin + prostatacancer", query: "metformin prostate cancer" },
-      { label: "Kardiovaskulär risk + prostatacancer", query: "cardiovascular risk prostate cancer diabetes" },
-      { label: "RALP/prostatektomi + diabetes", query: "prostatectomy diabetes outcomes" },
-      { label: "PSA-monitorering + diabetes", query: "PSA monitoring diabetes prostate" },
-      { label: "Njurfunktion + cancerbehandling", query: "renal function cancer treatment diabetes" },
-      { label: "Strålbehandling + diabetes", query: "radiotherapy prostate cancer diabetes" },
-      { label: "Aktiv övervakning + diabetes", query: "active surveillance prostate cancer diabetes" },
-      { label: "Insulinresistens + cancer", query: "insulin resistance prostate cancer" }
+      { label: "Prostatacancer + diabetes", q: '"prostatic neoplasms"[MeSH] AND "diabetes mellitus"[MeSH]' },
+      { label: "Metformin + prostatacancer", q: 'metformin[MeSH] AND "prostatic neoplasms"[MeSH]' },
+      { label: "ADT + metabola effekter", q: '"androgen antagonists"[MeSH] AND (diabetes OR "metabolic syndrome" OR hyperglycemia)' },
+      { label: "Kardiovaskulär + prostatacancer", q: '"prostatic neoplasms"[MeSH] AND "cardiovascular diseases"[MeSH] AND diabetes' },
+      { label: "Insulinresistens + prostatacancer", q: '"insulin resistance"[MeSH] AND "prostatic neoplasms"[MeSH]' },
+      { label: "Prostatektomi + diabetes", q: '"prostatectomy"[MeSH] AND "diabetes mellitus"[MeSH]' },
+      { label: "Strålbehandling + diabetes", q: '"radiotherapy"[MeSH] AND "prostatic neoplasms"[MeSH] AND diabetes' },
+      { label: "PSA + diabetes", q: '"prostate-specific antigen"[MeSH] AND "diabetes mellitus"[MeSH]' },
+      { label: "Aktiv övervakning + prostatacancer", q: '"watchful waiting"[MeSH] AND "prostatic neoplasms"[MeSH] AND diabetes' },
+      { label: "Gleason + diabetes", q: '"Neoplasm Grading"[MeSH] AND "prostatic neoplasms"[MeSH] AND diabetes' }
     ];
 
     var volumePromises = topics.map(function(t) {
-      return searchCount(t.query).then(function(c) { return { label: t.label, count: c }; });
+      return searchCount(t.q).then(function(c) { return { label: t.label, count: c }; });
     });
 
-    // ===== 2. PUBLICERINGSTREND (artiklar per år, senaste 15 åren) =====
+    // ===== 2. PUBLICERINGSTREND — MeSH-baserad sökning per år =====
+    var baseQ = '"prostatic neoplasms"[MeSH] AND "diabetes mellitus"[MeSH]';
     var currentYear = new Date().getFullYear();
     var years = [];
     for (var y = currentYear - 14; y <= currentYear; y++) years.push(y);
 
     var trendPromises = years.map(function(yr) {
-      return searchCount(baseQuery, {
-        mindate: yr + "/01/01",
-        maxdate: yr + "/12/31",
-        datetype: "pdat"
-      }).then(function(c) { return { year: yr, count: c }; });
+      return searchCountByYear(baseQ, yr).then(function(c) { return { year: yr, count: c }; });
     });
 
-    // ===== 3. EVIDENSNIVÅ (artikeltyper) =====
+    // ===== 3. EVIDENSNIVÅ — publication type filters =====
     var evidenceTypes = [
-      { label: "Randomiserade studier (RCT)", query: baseQuery + " AND Randomized Controlled Trial[pt]" },
-      { label: "Systematiska översikter", query: baseQuery + " AND Systematic Review[pt]" },
-      { label: "Meta-analyser", query: baseQuery + " AND Meta-Analysis[pt]" },
-      { label: "Kohortstudier", query: baseQuery + " AND Observational Study[pt]" },
-      { label: "Fallrapporter", query: baseQuery + " AND Case Reports[pt]" },
-      { label: "Översiktsartiklar", query: baseQuery + " AND Review[pt]" }
+      { label: "Randomiserade studier (RCT)", q: baseQ + ' AND "randomized controlled trial"[pt]' },
+      { label: "Systematiska översikter", q: baseQ + ' AND "systematic review"[pt]' },
+      { label: "Meta-analyser", q: baseQ + ' AND "meta-analysis"[pt]' },
+      { label: "Kohortstudier", q: baseQ + ' AND "observational study"[pt]' },
+      { label: "Fallrapporter", q: baseQ + ' AND "case reports"[pt]' },
+      { label: "Översiktsartiklar", q: baseQ + ' AND "review"[pt]' }
     ];
 
     var evidencePromises = evidenceTypes.map(function(e) {
-      return searchCount(e.query).then(function(c) { return { label: e.label, count: c }; });
+      return searchCount(e.q).then(function(c) { return { label: e.label, count: c }; });
     });
 
-    // ===== 4. TOPP-TIDSKRIFTER (hämta 200 artiklar, räkna tidskrifter) =====
-    var journalPromise = searchIds(baseQuery, 200).then(function(ids) {
+    // ===== 4. TOPP-TIDSKRIFTER =====
+    var journalPromise = searchIds(baseQ, 200).then(function(ids) {
       if (!ids.length) return [];
-      // Split into batches of 100
       var batches = [];
-      for (var i = 0; i < ids.length; i += 100) {
-        batches.push(ids.slice(i, i + 100));
-      }
+      for (var i = 0; i < ids.length; i += 100) batches.push(ids.slice(i, i + 100));
       return Promise.all(batches.map(fetchSummaries)).then(function(results) {
         var all = results.flat();
         var journals = {};
         all.forEach(function(a) {
-          var j = a.fulljournalname || a.source || "Okänd";
+          var j = a.fulljournalname || a.source || "Unknown";
           journals[j] = (journals[j] || 0) + 1;
         });
         return Object.entries(journals)
@@ -111,7 +116,6 @@ export default async function handler(req, res) {
       });
     });
 
-    // Kör allt parallellt
     var results = await Promise.all([
       Promise.all(volumePromises),
       Promise.all(trendPromises),
@@ -125,7 +129,7 @@ export default async function handler(req, res) {
       evidence: results[2].filter(function(e) { return e.count > 0; }).sort(function(a, b) { return b.count - a.count; }),
       journals: results[3],
       meta: {
-        baseQuery: baseQuery,
+        baseQuery: baseQ,
         fetchedAt: new Date().toISOString(),
         yearsRange: years[0] + "-" + years[years.length - 1]
       }
