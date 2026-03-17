@@ -1,7 +1,7 @@
 // Vercel serverless function — Claude tool_use loop för kohortfrågor
 // Claude får verktyg för att söka i patientdatabasen istället för att få all data i prompten
 
-var db = require("./cohort-data.js");
+import * as db from "./cohort-data.js";
 
 // Verktyg som Claude kan anropa
 var TOOLS = [
@@ -89,6 +89,50 @@ var TOOLS = [
       },
       required: ["field1", "field2"]
     }
+  },
+  {
+    name: "get_time_series",
+    description: "Hämta tidsserie-data (longitudinella mätningar) för PSA, HbA1c eller eGFR. Returnerar medelvärden per tidpunkt, eventuellt grupperat per behandling/utfall/riskgrupp. PSA-tidpunkter: baseline, 3mo, 6mo, 12mo, 24mo. HbA1c/eGFR-tidpunkter: baseline, 6mo, 12mo, 24mo. Perfekt för frågor om 'hur utvecklas PSA efter behandling' eller 'hur påverkas HbA1c av ADT över tid'.",
+    input_schema: {
+      type: "object",
+      properties: {
+        measure: {
+          type: "string",
+          enum: ["psa", "hba1c", "egfr"],
+          description: "Vilket mått att hämta tidsserie för: 'psa' (PSA ng/mL), 'hba1c' (HbA1c mmol/mol), 'egfr' (eGFR mL/min/1.73m²)."
+        },
+        group_by: {
+          type: "string",
+          description: "Valfritt: gruppera efter detta fält för jämförelser. T.ex. 't' för att se PSA-utveckling per behandling, 'o' per utfall, 'd' per diabetestyp."
+        },
+        filters: {
+          type: "object",
+          description: "Valfria filter. Samma format som search_patients.",
+          additionalProperties: true
+        }
+      },
+      required: ["measure"]
+    }
+  },
+  {
+    name: "get_patient_time_series",
+    description: "Hämta detaljerade tidsserier för specifika individuella patienter (via patient-ID). Använd detta efter search_patients för att granska enskilda patienters förlopp i detalj.",
+    input_schema: {
+      type: "object",
+      properties: {
+        patient_ids: {
+          type: "array",
+          items: { type: "number" },
+          description: "Lista med patient-ID:n att hämta tidsserier för."
+        },
+        measures: {
+          type: "array",
+          items: { type: "string", enum: ["psa", "hba1c", "egfr"] },
+          description: "Vilka mått att inkludera. Default: alla tre."
+        }
+      },
+      required: ["patient_ids"]
+    }
   }
 ];
 
@@ -103,6 +147,10 @@ function executeTool(name, input) {
       return db.countPatients(input.filters);
     case "cross_tabulate":
       return db.crossTabulate(input.field1, input.field2, input.filters);
+    case "get_time_series":
+      return db.getTimeSeries(input.measure, input.group_by, input.filters);
+    case "get_patient_time_series":
+      return db.getPatientTimeSeries(input.patient_ids, input.measures);
     default:
       return { error: "Unknown tool: " + name };
   }
@@ -126,13 +174,19 @@ var SYSTEM_PROMPT = "Du är en klinisk dataanalytiker med tillgång till en pati
   + "- rt: Retinopati (0/1)\n"
   + "- nf: Nefropati (0/1)\n"
   + "- kd: Kardiovaskulär sjukdom (0/1)\n\n"
+  + "LONGITUDINELLA TIDSSERIER (per patient):\n"
+  + "- psa_series: PSA-värden vid baseline, 3mo, 6mo, 12mo, 24mo\n"
+  + "- hba1c_series: HbA1c-värden vid baseline, 6mo, 12mo, 24mo\n"
+  + "- egfr_series: eGFR-värden vid baseline, 6mo, 12mo, 24mo\n"
+  + "Använd get_time_series för aggregerade trender och get_patient_time_series för individuella förlopp.\n\n"
   + "INSTRUKTIONER:\n"
   + "1. Använd ALLTID verktygen för att hämta data. Gissa aldrig siffror.\n"
   + "2. Gör flera verktygsanrop om det behövs för att svara fullständigt.\n"
   + "3. Svara på svenska med åäö.\n"
   + "4. Ange exakta siffror: antal, procent, medelvärden.\n"
   + "5. Skriv 4-10 meningar ren löptext. Ingen markdown (inga **, #, punktlistor). Inga taggar.\n"
-  + "6. Om frågan gäller enskilda patienter, använd search_patients och nämn relevanta detaljer.";
+  + "6. Om frågan gäller enskilda patienter, använd search_patients och nämn relevanta detaljer.\n"
+  + "7. För tidsseriefrågor (utveckling över tid, trender, förlopp), använd get_time_series. Gruppera gärna per behandling eller utfall för jämförelser.";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
