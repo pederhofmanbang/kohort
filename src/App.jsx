@@ -312,18 +312,17 @@ function ToolTracePanel(props) {
   var trace = props.trace || [];
   var openS = useState(false); var isOpen = openS[0]; var setOpen = openS[1];
   var detailS = useState(null); var detailIdx = detailS[0]; var setDetail = detailS[1];
-  if (trace.length === 0) return null;
   return (
     <div style={{ marginTop: 6, marginBottom: 4 }}>
-      <button onClick={function(){setOpen(!isOpen); if (isOpen) setDetail(null);}} style={{
+      <button onClick={function(){if (trace.length > 0) { setOpen(!isOpen); if (isOpen) setDetail(null); }}} style={{
         display: "flex", alignItems: "center", gap: 6, padding: "5px 10px",
         background: isOpen ? "#f0f9ff" : "transparent", border: "1px solid " + (isOpen ? "#bae6fd" : "#e2e8f0"),
-        borderRadius: 6, cursor: "pointer", fontSize: 10, color: "#0369a1", fontWeight: 500, width: "100%"
+        borderRadius: 6, cursor: trace.length > 0 ? "pointer" : "default", fontSize: 10, color: "#0369a1", fontWeight: 500, width: "100%"
       }}>
-        <span style={{ transform: isOpen ? "rotate(90deg)" : "none", transition: "transform 0.15s", display: "inline-block", fontSize: 8 }}>{"\u25B6"}</span>
-        <span style={{ background: "#e0f2fe", padding: "1px 6px", borderRadius: 3, fontSize: 9, fontWeight: 700, color: "#0c4a6e" }}>{trace.length}</span>
-        <span>databass\u00F6kningar utf\u00F6rda</span>
-        <span style={{ marginLeft: "auto", fontSize: 9, color: "#94a3b8" }}>{isOpen ? "d\u00F6lj" : "visa transparens"}</span>
+        {trace.length > 0 && <span style={{ transform: isOpen ? "rotate(90deg)" : "none", transition: "transform 0.15s", display: "inline-block", fontSize: 8 }}>{"\u25B6"}</span>}
+        <span style={{ background: trace.length > 0 ? "#e0f2fe" : "#fef3c7", padding: "1px 6px", borderRadius: 3, fontSize: 9, fontWeight: 700, color: trace.length > 0 ? "#0c4a6e" : "#92400e" }}>{trace.length}</span>
+        <span>{trace.length === 0 ? "inga databass\u00F6kningar (modellen svarade direkt)" : "databass\u00F6kningar utf\u00F6rda"}</span>
+        {trace.length > 0 && <span style={{ marginLeft: "auto", fontSize: 9, color: "#94a3b8" }}>{isOpen ? "d\u00F6lj" : "visa transparens"}</span>}
       </button>
       {isOpen && (
         <div style={{ marginTop: 4, borderLeft: "2px solid #bae6fd", marginLeft: 6, paddingLeft: 8 }}>
@@ -1545,7 +1544,7 @@ export default function App() {
     return (
       <div style={{ marginBottom: 12 }}>
         {showK && (s.kohort ? <Section type="kohort" text={s.kohort} /> : s.loading === "kohort" ? <Section type="kohort" loading={true} loadingText="S\u00F6ker i kohortdatabas via tool_use\u2026" /> : null)}
-        {showK && s.toolTrace && s.toolTrace.length > 0 && <ToolTracePanel trace={s.toolTrace} />}
+        {showK && s.toolTrace && <ToolTracePanel trace={s.toolTrace} />}
         {showP && (s.pubmed ? <Section type="pubmed" text={s.pubmed} articles={s.articles} totalFound={s.totalFound} /> : s.loading === "pubmed" ? <Section type="pubmed" loading={true} loadingText="S\u00F6ker PubMed (E-utilities)\u2026" /> : null)}
         {showS && (s.syntes ? <Section type="syntes" text={s.syntes} /> : s.loading === "syntes" ? <Section type="syntes" loading={true} loadingText="Genererar sammanv\u00E4gd bed\u00F6mning\u2026" /> : null)}
         {saveBtn}

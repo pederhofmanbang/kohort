@@ -180,7 +180,7 @@ var SYSTEM_PROMPT = "Du är en klinisk dataanalytiker med tillgång till en pati
   + "- egfr_series: eGFR-värden vid baseline, 6mo, 12mo, 24mo\n"
   + "Använd get_time_series för aggregerade trender och get_patient_time_series för individuella förlopp.\n\n"
   + "INSTRUKTIONER:\n"
-  + "1. Använd ALLTID verktygen för att hämta data. Gissa aldrig siffror.\n"
+  + "1. Använd ALLTID verktygen för att hämta data — även om du tror att frågan inte matchar tillgängliga fält. Anropa minst ett verktyg (t.ex. count_patients eller get_statistics) för att verifiera vad som finns. Gissa aldrig siffror.\n"
   + "2. Gör flera verktygsanrop om det behövs för att svara fullständigt.\n"
   + "3. Svara på svenska med åäö.\n"
   + "4. Ange exakta siffror: antal, procent, medelvärden.\n"
