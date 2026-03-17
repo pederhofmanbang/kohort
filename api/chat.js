@@ -11,6 +11,16 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Validera input — tillåt bara förväntade modeller och begränsa tokens
+    var body = req.body || {};
+    var allowedModels = ["claude-sonnet-4-20250514", "claude-haiku-4-5-20251001"];
+    if (body.model && allowedModels.indexOf(body.model) < 0) {
+      return res.status(400).json({ error: "Model not allowed: " + body.model });
+    }
+    if (body.max_tokens && body.max_tokens > 4096) {
+      body.max_tokens = 4096;
+    }
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -18,7 +28,7 @@ export default async function handler(req, res) {
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01'
       },
-      body: JSON.stringify(req.body)
+      body: JSON.stringify(body)
     });
 
     const data = await response.json();

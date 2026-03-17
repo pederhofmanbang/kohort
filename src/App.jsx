@@ -18,24 +18,6 @@ var VIZ_INSTRUCTION = "\n\nVIKTIGT — VISUALISERINGAR:\n"
   + "Skapa data baserat på kohorten. Du kan inkludera flera VIZ-block i samma svar.\n"
   + "VIKTIGT: VIZ-blocket ska innehålla giltig JSON. Inga kommentarer i JSON. Inga markdown-tabeller i löptexten.";
 
-// ========== PROMPTER (en per steg) ==========
-var PROMPT_KOHORT = "Du är en klinisk dataanalytiker. Svara på svenska med åäö.\n\n"
-  + "KOHORTDATA:\n" + JSON.stringify(COHORT) + "\n\n"
-  + "Analysera kohortdatan baserat på användarens fråga. Ange specifika siffror: antal patienter, procent, medelvärden.\n"
-  + "Skriv 4-8 meningar ren löptext. Ingen markdown (inga **, #, punktlistor). Inga taggar."
-  + VIZ_INSTRUCTION;
-
-var PATIENT_KEY = "Fältnycklar: a=ålder, r=riskgrupp, g=Gleason, p=PSA vid diagnos, t=behandling (EBRT/RALP/EBRT_ADT/active_surveillance/RALP_adj/palliative/ADT_only/ADT_chemo), o=utfall, d=diabetestyp (T1/T2), dd=diabetesduration år, h=HbA1c mmol/mol, b=BMI, e=eGFR, ht=hypertoni(0/1), rt=retinopati(0/1), nf=nefropati(0/1), kd=kardiovaskulär(0/1)";
-
-var PROMPT_KOHORT_DETAIL = "Du är en klinisk dataanalytiker. Svara på svenska med åäö.\n\n"
-  + "KOHORTÖVERSIKT:\n" + JSON.stringify(COHORT) + "\n\n"
-  + PATIENT_KEY + "\n\n"
-  + "INDIVIDUELLA PATIENTER (n=100):\n" + JSON.stringify(PATIENTS) + "\n\n"
-  + "Du har tillgång till ALLA individuella patientdata. Räkna exakt — filtrera arrayen mentalt baserat på frågan.\n"
-  + "Ange exakta antal, lista specifika patienter om relevant (t.ex. 'Patient 4: ålder 54, PSA 3.8, aktiv övervakning').\n"
-  + "Skriv 4-10 meningar ren löptext. Ingen markdown. Inga taggar."
-  + VIZ_INSTRUCTION;
-
 // PubMed-sökning bygger en MeSH-liknande query från användarens fråga
 var PUBMED_KEYWORDS = {
   "hba1c": "HbA1c glycated hemoglobin",
@@ -113,9 +95,6 @@ function buildSyntesPrompt(kohortText, pubmedText, userQuestion) {
     + "Skriv 4-8 meningar ren löptext. Ingen markdown. Inga taggar."
     + VIZ_INSTRUCTION;
 }
-
-var PROMPT_KOHORT_SHORT = "Du är en klinisk dataanalytiker. Svara på svenska. Kort (2 meningar).\n"
-  + "KOHORTDATA:\n" + JSON.stringify(COHORT) + "\nAnalysera kort:";
 
 // ========== DIAGRAMVAL ==========
 function matchChart(question) {
@@ -711,9 +690,29 @@ function LathundTab() {
 }
 
 // ========== PUBMED-LANDSKAP TAB ==========
-function PubMedLandskapsTab() {
-  var data = {"volume":[{"label":"Prostatacancer + diabetes (totalt)","count":3927},{"label":"Metformin + prostatacancer","count":892},{"label":"Kardiovaskulär risk + prostatacancer","count":734},{"label":"ADT + metabola effekter","count":612},{"label":"Insulinresistens + prostatacancer","count":487},{"label":"PSA + diabetes","count":356},{"label":"Prostatektomi + diabetes","count":298},{"label":"Strålbehandling + diabetes","count":187},{"label":"Gleason + diabetes","count":143},{"label":"Aktiv övervakning + diabetes","count":67}],"trend":[{"year":2012,"count":198},{"year":2013,"count":221},{"year":2014,"count":245},{"year":2015,"count":268},{"year":2016,"count":289},{"year":2017,"count":312},{"year":2018,"count":341},{"year":2019,"count":358},{"year":2020,"count":329},{"year":2021,"count":367},{"year":2022,"count":398},{"year":2023,"count":421},{"year":2024,"count":447},{"year":2025,"count":389},{"year":2026,"count":87}],"evidence":[{"label":"Översiktsartiklar","count":847},{"label":"Kohortstudier","count":623},{"label":"Meta-analyser","count":156},{"label":"Randomiserade studier (RCT)","count":134},{"label":"Systematiska översikter","count":112},{"label":"Fallrapporter","count":89}],"journals":[{"journal":"Prostate Cancer and Prostatic Diseases","count":28},{"journal":"The Journal of Urology","count":24},{"journal":"European Urology","count":19},{"journal":"Cancer Epidemiology, Biomarkers & Prevention","count":17},{"journal":"BJU International","count":15},{"journal":"The Prostate","count":14},{"journal":"Diabetologia","count":12},{"journal":"Urology","count":11},{"journal":"Cancer Causes & Control","count":10},{"journal":"Diabetes Care","count":9},{"journal":"PLOS ONE","count":8},{"journal":"Annals of Oncology","count":7},{"journal":"International Journal of Cancer","count":7},{"journal":"World Journal of Urology","count":6},{"journal":"Cancers (Basel)","count":6}],"meta":{"baseQuery":"prostatic neoplasms AND diabetes mellitus (MeSH)","fetchedAt":"2026-03-16","yearsRange":"2012-2026","note":"Siffror baserade på PubMed MeSH-sökningar mars 2026. Trend 2026 är ofullständigt år."}};
+var FALLBACK_LANDSCAPE = {"volume":[{"label":"Prostatacancer + diabetes (totalt)","count":3927},{"label":"Metformin + prostatacancer","count":892},{"label":"Kardiovaskulär risk + prostatacancer","count":734},{"label":"ADT + metabola effekter","count":612},{"label":"Insulinresistens + prostatacancer","count":487},{"label":"PSA + diabetes","count":356},{"label":"Prostatektomi + diabetes","count":298},{"label":"Strålbehandling + diabetes","count":187},{"label":"Gleason + diabetes","count":143},{"label":"Aktiv övervakning + diabetes","count":67}],"trend":[{"year":2012,"count":198},{"year":2013,"count":221},{"year":2014,"count":245},{"year":2015,"count":268},{"year":2016,"count":289},{"year":2017,"count":312},{"year":2018,"count":341},{"year":2019,"count":358},{"year":2020,"count":329},{"year":2021,"count":367},{"year":2022,"count":398},{"year":2023,"count":421},{"year":2024,"count":447},{"year":2025,"count":389},{"year":2026,"count":87}],"evidence":[{"label":"Översiktsartiklar","count":847},{"label":"Kohortstudier","count":623},{"label":"Meta-analyser","count":156},{"label":"Randomiserade studier (RCT)","count":134},{"label":"Systematiska översikter","count":112},{"label":"Fallrapporter","count":89}],"journals":[{"journal":"Prostate Cancer and Prostatic Diseases","count":28},{"journal":"The Journal of Urology","count":24},{"journal":"European Urology","count":19},{"journal":"Cancer Epidemiology, Biomarkers & Prevention","count":17},{"journal":"BJU International","count":15},{"journal":"The Prostate","count":14},{"journal":"Diabetologia","count":12},{"journal":"Urology","count":11},{"journal":"Cancer Causes & Control","count":10},{"journal":"Diabetes Care","count":9},{"journal":"PLOS ONE","count":8},{"journal":"Annals of Oncology","count":7},{"journal":"International Journal of Cancer","count":7},{"journal":"World Journal of Urology","count":6},{"journal":"Cancers (Basel)","count":6}],"meta":{"baseQuery":"prostatic neoplasms AND diabetes mellitus (MeSH)","fetchedAt":"2026-03-16","yearsRange":"2012-2026","note":"Siffror baserade på PubMed MeSH-sökningar mars 2026. Trend 2026 är ofullständigt år."}};
 
+function PubMedLandskapsTab() {
+  var dataS = useState(null); var data = dataS[0]; var setData = dataS[1];
+  var loadingS = useState(false); var isLoading = loadingS[0]; var setIsLoading = loadingS[1];
+
+  useEffect(function() {
+    setIsLoading(true);
+    fetch("/api/pubmed-landscape")
+      .then(function(r) { return r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status)); })
+      .then(function(d) { setData(d); setIsLoading(false); })
+      .catch(function() { setData(FALLBACK_LANDSCAPE); setIsLoading(false); });
+  }, []);
+
+
+  if (isLoading || !data) return (
+    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b", fontSize: 12 }}>
+      <div style={{ textAlign: "center" }}>
+        <div style={{ width: 16, height: 16, borderRadius: "50%", border: "2px solid #e2e8f0", borderTopColor: "#059669", animation: "spin 1s linear infinite", margin: "0 auto 8px" }} />
+        H\u00E4mtar PubMed-landskapsdata\u2026
+      </div>
+    </div>
+  );
 
   var volumeData = (data.volume || []).map(function(v) { return { name: v.label, value: v.count }; });
   var trendData = (data.trend || []).map(function(t) { return { name: String(t.year), value: t.count }; });
@@ -1400,10 +1399,10 @@ export default function App() {
     var wantSyntes = (currentSrc === "both");
     var firstLoading = wantKohort ? "kohort" : "pubmed";
 
-    // Initiera steg-state
+    // Initiera steg-state ("both" visar båda som laddar parallellt)
     setSteps(function(prev) {
       var next = Object.assign({}, prev);
-      next[msgIdx] = { kohort: null, pubmed: null, syntes: null, articles: null, totalFound: 0, mode: currentMode, src: currentSrc, loading: firstLoading };
+      next[msgIdx] = { kohort: null, pubmed: null, syntes: null, articles: null, totalFound: 0, mode: currentMode, src: currentSrc, loading: wantSyntes ? "both" : firstLoading };
       return next;
     });
 
@@ -1456,31 +1455,43 @@ export default function App() {
       return;
     }
 
-    // ===== BÅDA (kohort → pubmed → syntes) =====
-    kohortDbCall(q, wantChart, ctrl.signal)
-    .then(function(result) {
+    // ===== BÅDA (kohort ∥ pubmed → syntes) =====
+    var kohortPromise = kohortDbCall(q, wantChart, ctrl.signal).then(function(result) {
       if (result.vizzes && result.vizzes.length > 0) {
         setCharts(function(prev) { return prev.concat(result.vizzes); });
       }
       setSteps(function(prev) {
         var next = Object.assign({}, prev);
-        next[msgIdx] = Object.assign({}, next[msgIdx], { kohort: result.text, toolTrace: result.toolTrace, loading: "pubmed" });
+        next[msgIdx] = Object.assign({}, next[msgIdx], { kohort: result.text, toolTrace: result.toolTrace });
         return next;
       });
-      return pubmedCall(q, ctrl.signal).then(function(pubmedResult) {
-        setSteps(function(prev) {
-          var next = Object.assign({}, prev);
-          next[msgIdx] = Object.assign({}, next[msgIdx], {
-            pubmed: pubmedResult.summary,
-            articles: pubmedResult.articles,
-            totalFound: pubmedResult.totalFound,
-            loading: "syntes"
-          });
-          return next;
+      return result;
+    });
+
+    var pubmedPromise = pubmedCall(q, ctrl.signal).then(function(pubmedResult) {
+      setSteps(function(prev) {
+        var next = Object.assign({}, prev);
+        next[msgIdx] = Object.assign({}, next[msgIdx], {
+          pubmed: pubmedResult.summary,
+          articles: pubmedResult.articles,
+          totalFound: pubmedResult.totalFound
         });
-        var syntesPrompt = buildSyntesPrompt(result.text, pubmedResult.summary, q);
-        return apiCall(syntesPrompt, q, ctrl.signal);
+        return next;
       });
+      return pubmedResult;
+    });
+
+    Promise.all([kohortPromise, pubmedPromise])
+    .then(function(results) {
+      var kohortResult = results[0];
+      var pubmedResult = results[1];
+      setSteps(function(prev) {
+        var next = Object.assign({}, prev);
+        next[msgIdx] = Object.assign({}, next[msgIdx], { loading: "syntes" });
+        return next;
+      });
+      var syntesPrompt = buildSyntesPrompt(kohortResult.text, pubmedResult.summary, q);
+      return apiCall(syntesPrompt, q, ctrl.signal);
     })
     .then(function(syntesResult) {
       if (syntesResult.vizzes && syntesResult.vizzes.length > 0) {
@@ -1551,9 +1562,9 @@ export default function App() {
 
     return (
       <div style={{ marginBottom: 12 }}>
-        {showK && (s.kohort ? <Section type="kohort" text={s.kohort} /> : s.loading === "kohort" ? <Section type="kohort" loading={true} loadingText="S\u00F6ker i kohortdatabas via tool_use\u2026" /> : null)}
+        {showK && (s.kohort ? <Section type="kohort" text={s.kohort} /> : (s.loading === "kohort" || s.loading === "both") ? <Section type="kohort" loading={true} loadingText="S\u00F6ker i kohortdatabas via tool_use\u2026" /> : null)}
         {showK && s.toolTrace && <ToolTracePanel trace={s.toolTrace} />}
-        {showP && (s.pubmed ? <Section type="pubmed" text={s.pubmed} articles={s.articles} totalFound={s.totalFound} /> : s.loading === "pubmed" ? <Section type="pubmed" loading={true} loadingText="S\u00F6ker PubMed (E-utilities)\u2026" /> : null)}
+        {showP && (s.pubmed ? <Section type="pubmed" text={s.pubmed} articles={s.articles} totalFound={s.totalFound} /> : (s.loading === "pubmed" || s.loading === "both") ? <Section type="pubmed" loading={true} loadingText="S\u00F6ker PubMed (E-utilities)\u2026" /> : null)}
         {showS && (s.syntes ? <Section type="syntes" text={s.syntes} /> : s.loading === "syntes" ? <Section type="syntes" loading={true} loadingText="Genererar sammanv\u00E4gd bed\u00F6mning\u2026" /> : null)}
         {saveBtn}
       </div>
@@ -1603,7 +1614,7 @@ export default function App() {
             <Metric label="DM typ 1/2" value={(dm.T1 || 0) + "/" + (dm.T2 || 0)} sub="15%/85%" />
             <Metric label="HbA1c baseline" value={d.diabetes.hba1c_baseline_mean} sub="mmol/mol" color="#b45309" />
             <Metric label="PSA diagnos" value={d.cancer.psa_at_diagnosis.median} sub="median µg/L" color="#dc2626" />
-            <Metric label="HbA1c ADT-effekt" value={"+" + d.labs_summary.hba1c_change_with_adt} sub="mmol/mol" color="#dc2626" />
+            <Metric label="HbA1c ADT-effekt" value={"+" + (Math.round((d.labs_summary.hba1c_mean_with_adt - d.labs_summary.hba1c_mean_without_adt) * 10) / 10)} sub="mmol/mol" color="#dc2626" />
           </div>
 
           <div style={{ flex: 1, display: "flex", gap: 10, padding: "0 16px 10px", minHeight: 0 }}>
