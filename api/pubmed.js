@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { query, maxResults = 5 } = req.body;
+  const { query, maxResults = 8, userQuestion = "" } = req.body;
   if (!query) {
     return res.status(400).json({ error: "Missing query" });
   }
@@ -22,7 +22,10 @@ export default async function handler(req, res) {
       term: query,
       retmax: String(maxResults),
       sort: "relevance",
-      retmode: "json"
+      retmode: "json",
+      mindate: "2015",
+      maxdate: "2026",
+      datetype: "pdat"
     });
     // Lägg till API-nyckel om den finns (ger högre rate limit)
     if (process.env.NCBI_API_KEY) {
@@ -88,8 +91,10 @@ export default async function handler(req, res) {
             model: "claude-sonnet-4-20250514",
             max_tokens: 1024,
             system: "Du är en medicinsk forskare. Svara på svenska med åäö.\n\n"
-              + "Sammanfatta de viktigaste fynden från artiklarna nedan. "
+              + "Användaren ställde följande fråga: \"" + (userQuestion || "allmän sökning") + "\"\n\n"
+              + "Sammanfatta de viktigaste fynden från artiklarna nedan som är relevanta för användarens fråga. "
               + "Citera varje studie med författare och årtal. "
+              + "Fokusera på kliniskt relevanta resultat. "
               + "Skriv 4-8 meningar ren löptext. Ingen markdown.",
             messages: [{ role: "user", content: articlesText }]
           })

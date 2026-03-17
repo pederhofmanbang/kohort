@@ -61,14 +61,24 @@ var PUBMED_KEYWORDS = {
 
 function buildPubmedQuery(question) {
   var q = question.toLowerCase();
-  var terms = ["prostate cancer", "diabetes"];
+  var matched = [];
   for (var kw in PUBMED_KEYWORDS) {
     if (q.indexOf(kw) >= 0) {
-      terms.push(PUBMED_KEYWORDS[kw]);
-      break; // ta bara det mest specifika
+      matched.push(PUBMED_KEYWORDS[kw]);
     }
   }
-  return terms.join(" ");
+  // Bygg strukturerad PubMed-query med AND/OR
+  var base = "(prostate cancer) AND (diabetes)";
+  if (matched.length > 0) {
+    // Unika termer, undvik dubbletter
+    var seen = {};
+    var unique = [];
+    matched.forEach(function(m) {
+      if (!seen[m]) { seen[m] = true; unique.push("(" + m + ")"); }
+    });
+    base += " AND (" + unique.join(" OR ") + ")";
+  }
+  return base;
 }
 
 function pubmedCall(question, signal) {
@@ -77,7 +87,7 @@ function pubmedCall(question, signal) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     signal: signal,
-    body: JSON.stringify({ query: searchQuery, maxResults: 5 })
+    body: JSON.stringify({ query: searchQuery, maxResults: 8, userQuestion: question })
   }).then(function(r) {
     if (!r.ok) return r.text().then(function(t) { throw new Error("PubMed API " + r.status + ": " + t.substring(0, 200)); });
     return r.json();
@@ -92,12 +102,13 @@ function pubmedCall(question, signal) {
   });
 }
 
-function buildSyntesPrompt(kohortText, pubmedText) {
+function buildSyntesPrompt(kohortText, pubmedText, userQuestion) {
   return "Du är en klinisk rådgivare. Svara på svenska med åäö.\n\n"
+    + "ANVÄNDARENS FRÅGA: " + (userQuestion || "") + "\n\n"
     + "Nedan finns två analyser — en baserad på lokal kohortdata och en på publicerad PubMed-evidens.\n\n"
     + "KOHORTANALYS:\n" + kohortText + "\n\n"
     + "PUBMED-EVIDENS:\n" + pubmedText + "\n\n"
-    + "Väg samman dessa. Ge en sammanvägd klinisk bedömning med konkreta rekommendationer.\n"
+    + "Besvara användarens fråga genom att väga samman dessa. Ge en sammanvägd klinisk bedömning med konkreta rekommendationer.\n"
     + "Notera om kohortfynden stämmer med eller avviker från publicerad forskning.\n"
     + "Skriv 4-8 meningar ren löptext. Ingen markdown. Inga taggar."
     + VIZ_INSTRUCTION;
@@ -1467,7 +1478,7 @@ export default function App() {
           });
           return next;
         });
-        var syntesPrompt = buildSyntesPrompt(result.text, pubmedResult.summary);
+        var syntesPrompt = buildSyntesPrompt(result.text, pubmedResult.summary, q);
         return apiCall(syntesPrompt, q, ctrl.signal);
       });
     })
