@@ -1,0 +1,109 @@
+{
+  "cohort_description": "100 män 50-65 år med prostatacancer (C61) + insulinbehandlad diabetes (E10/E11). Syntetisk data baserad på svensk epidemiologi.",
+  "n": 100,
+  "demographics": {
+    "age_mean": 56.9,
+    "age_range": "50-65",
+    "age_distribution": { "50-54": 36, "55-59": 34, "60-64": 25, "65-69": 5 }
+  },
+  "cancer": {
+    "risk_groups": {
+      "intermediate_fav": 20,
+      "very_high_metastatic": 15,
+      "very_low": 10,
+      "high": 20,
+      "intermediate_unfav": 20,
+      "low": 15
+    },
+    "gleason_distribution": {
+      "3+3=6": 25,
+      "3+4=7": 29,
+      "4+3=7": 20,
+      "4+4=8": 15,
+      "4+5=9": 3,
+      "5+4=9": 8
+    },
+    "psa_at_diagnosis": { "mean": 29.9, "median": 10.3, "range": "2.7-192.6" }
+  },
+  "diabetes": {
+    "type_distribution": { "T2": 85, "T1": 15 },
+    "duration_mean": 15.0,
+    "hba1c_baseline_mean": 59.2,
+    "hba1c_baseline_range": "42-77"
+  },
+  "treatments": {
+    "distribution": {
+      "EBRT": 10,
+      "RALP": 26,
+      "EBRT_ADT": 29,
+      "active_surveillance": 16,
+      "RALP_adj": 7,
+      "palliative": 5,
+      "ADT_only": 3,
+      "ADT_chemo": 4
+    }
+  },
+  "outcomes": {
+    "distribution": {
+      "curative_good": 24,
+      "deceased_other": 4,
+      "stable_AS": 13,
+      "curative_side_effects": 16,
+      "local_progression": 12,
+      "biochemical_recurrence": 17,
+      "partial_response": 4,
+      "deceased_cancer": 6,
+      "reclassified_to_treatment": 3,
+      "progression": 1
+    }
+  },
+  "labs_summary": {
+    "psa_by_treatment": {
+      "EBRT": { "baseline": 2.3, "nadir": 0.17, "latest": 0.36 },
+      "RALP": { "baseline": 2.14, "nadir": 0.03, "latest": 0.21 },
+      "EBRT_ADT": { "baseline": 13.6, "nadir": 0.03, "latest": 0.88 },
+      "active_surveillance": { "baseline": 0.73, "nadir": 0.71, "latest": 5.44 },
+      "RALP_adj": { "baseline": 10.47, "nadir": 0.03, "latest": 0.23 },
+      "palliative": { "baseline": 62.77, "nadir": 6.4, "latest": 6.77 },
+      "ADT_only": { "baseline": 48.49, "nadir": 0.01, "latest": 0.01 },
+      "ADT_chemo": { "baseline": 69.08, "nadir": 0.0, "latest": 0.08 }
+    },
+    "hba1c_change_with_adt": 6.5,
+    "hba1c_change_without_adt": 0.7
+  },
+  "medications_summary": {
+    "drug_frequency": {
+      "A10BA02 Metformin": 85,
+      "C10AA05 Atorvastatin": 70,
+      "A12AX Kalcipos-D forte": 43,
+      "C09AA02 Enalapril": 39,
+      "L02BB01 Bikalutamid": 34,
+      "A10AE04 Lantus (insulin glargin)": 31,
+      "C09CA01 Losartan": 29,
+      "B01AC06 Trombyl (ASA)": 25,
+      "C08CA01 Amlodipin": 25,
+      "A10AE05 Levemir (insulin detemir)": 24,
+      "A10AE04 Toujeo (insulin glargin 300)": 24,
+      "G04BE03 Sildenafil": 23,
+      "A10AE06 Tresiba (insulin degludek)": 21,
+      "L02AE02 Leuprorelin (Eligard)": 20,
+      "A10AB04 Humalog (insulin lispro)": 14,
+      "L02AE03 Goserelin (Zoladex)": 14,
+      "A10AB06 Apidra (insulin glulisin)": 14,
+      "A10AB05 Fiasp (insulin aspart)": 13,
+      "A10AB05 NovoRapid (insulin aspart)": 13,
+      "A10BK01 Jardiance (empagliflozin)": 11
+    }
+  },
+  "complications": {
+    "comorbidity_counts": {
+      "hypertoni": 65,
+      "hyperkolesterolemi": 45,
+      "retinopati": 28,
+      "nefropati": 19,
+      "neuropati": 16,
+      "kardiovaskulart": 13,
+      "overvikt_bmi30": 48
+    }
+  }
+}

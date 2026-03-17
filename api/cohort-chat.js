@@ -1,5 +1,6 @@
 // Vercel serverless function — Claude tool_use loop för kohortfrågor
 // Claude får verktyg för att söka i patientdatabasen istället för att få all data i prompten
+// All data deriverad från kohort_100_patienter.json
 
 import * as db from "./cohort-data.js";
 
@@ -7,19 +8,19 @@ import * as db from "./cohort-data.js";
 var TOOLS = [
   {
     name: "search_patients",
-    description: "Sök och filtrera individuella patienter i kohorten. Returnerar matchande patientposter. Använd detta för att hitta specifika patienter eller granska individuella fall. Filtrera på valfritt fält: ålder (a), riskgrupp (r), Gleason (g), PSA (p), behandling (t), utfall (o), diabetestyp (d), diabetesduration (dd), HbA1c (h), BMI (b), eGFR (e), hypertoni (ht), retinopati (rt), nefropati (nf), kardiovaskulär sjukdom (kd).",
+    description: "Sök och filtrera individuella patienter i kohorten. Returnerar matchande patientposter. Filtrera på valfritt fält: ålder (a), riskgrupp (r), Gleason (g), PSA (p), ISUP-grad (isup), TNM (tnm), PI-RADS (pirads), biopsikolvar pos/tot (cores_pos/cores_total), behandling (t), utfall (o), diabetestyp (d), diabetesduration (dd), HbA1c (h), BMI (b), eGFR (e), hypertoni (ht), hyperkolesterolemi (hk), övervikt (ov), retinopati (rt), nefropati (nf), neuropati (np), kardiovaskulär sjukdom (kd), kommun (municipality), sjukhus (hospital).",
     input_schema: {
       type: "object",
       properties: {
         filters: {
           type: "object",
-          description: "Filtreringskriterier. Nyckel = fältnamn (a, r, g, p, t, o, d, dd, h, b, e, ht, rt, nf, kd). Värde = exakt match (string/number), array för 'any of' (t.ex. [\"RALP\",\"EBRT\"]), eller {min, max} för range (t.ex. {\"min\":60,\"max\":65} för ålder 60-65).",
+          description: "Filtreringskriterier. Nyckel = fältnamn. Värde = exakt match (string/number), array för 'any of', eller {min, max} för range.",
           additionalProperties: true
         },
         fields: {
           type: "array",
           items: { type: "string" },
-          description: "Vilka fält att returnera per patient. Om tomt returneras alla fält. Exempel: [\"a\",\"t\",\"o\",\"h\"] för ålder, behandling, utfall, HbA1c."
+          description: "Vilka fält att returnera per patient. Om tomt returneras alla fält."
         },
         limit: {
           type: "number",
@@ -31,21 +32,21 @@ var TOOLS = [
   },
   {
     name: "get_statistics",
-    description: "Beräkna statistik för ett fält i kohorten. För numeriska fält (ålder, PSA, HbA1c, BMI, eGFR, diabetesduration): medelvärde, median, min, max, standardavvikelse. För kategoriska fält (riskgrupp, Gleason, behandling, utfall, diabetestyp): frekvensfördelning. Kan grupperas efter ett annat fält för jämförelser (t.ex. HbA1c grupperat efter behandling).",
+    description: "Beräkna statistik för ett fält i kohorten. Numeriska fält: medelvärde, median, min, max, standardavvikelse. Kategoriska fält: frekvensfördelning. Kan grupperas efter annat fält.",
     input_schema: {
       type: "object",
       properties: {
         field: {
           type: "string",
-          description: "Fältet att beräkna statistik för. Numeriska: a (ålder), p (PSA), dd (diabetesduration), h (HbA1c), b (BMI), e (eGFR). Kategoriska: r (riskgrupp), g (Gleason), t (behandling), o (utfall), d (diabetestyp). Binära: ht, rt, nf, kd."
+          description: "Fältet att beräkna statistik för. Numeriska: a, p, dd, h, b, e, isup, pirads, cores_pos, cores_total. Kategoriska: r, g, t, o, d, tnm, municipality, hospital. Binära: ht, hk, ov, rt, nf, np, kd."
         },
         group_by: {
           type: "string",
-          description: "Valfritt: gruppera statistiken efter detta fält. T.ex. field='h' + group_by='t' ger medel-HbA1c per behandling."
+          description: "Valfritt: gruppera statistiken efter detta fält."
         },
         filters: {
           type: "object",
-          description: "Valfria filter att applicera innan beräkning. Samma format som search_patients.",
+          description: "Valfria filter innan beräkning.",
           additionalProperties: true
         }
       },
@@ -54,13 +55,13 @@ var TOOLS = [
   },
   {
     name: "count_patients",
-    description: "Räkna antal patienter som matchar givna kriterier. Returnerar antal, totalt och procent. Använd detta för snabba 'hur många'-frågor.",
+    description: "Räkna antal patienter som matchar givna kriterier. Returnerar antal, totalt och procent.",
     input_schema: {
       type: "object",
       properties: {
         filters: {
           type: "object",
-          description: "Filtreringskriterier. Samma format som search_patients. Tomt = alla 100 patienter.",
+          description: "Filtreringskriterier. Tomt = alla 100 patienter.",
           additionalProperties: true
         }
       },
@@ -69,69 +70,210 @@ var TOOLS = [
   },
   {
     name: "cross_tabulate",
-    description: "Korstabell av två fält. Visar antal patienter per kombination av två variabler. Perfekt för att analysera samband, t.ex. behandling × utfall, riskgrupp × behandling, diabetestyp × utfall.",
+    description: "Korstabell av två fält. Visar antal patienter per kombination av två variabler.",
     input_schema: {
       type: "object",
       properties: {
-        field1: {
-          type: "string",
-          description: "Första fältet (rader i tabellen). T.ex. 't' för behandling."
-        },
-        field2: {
-          type: "string",
-          description: "Andra fältet (kolumner i tabellen). T.ex. 'o' för utfall."
-        },
-        filters: {
-          type: "object",
-          description: "Valfria filter.",
-          additionalProperties: true
-        }
+        field1: { type: "string", description: "Första fältet (rader)." },
+        field2: { type: "string", description: "Andra fältet (kolumner)." },
+        filters: { type: "object", description: "Valfria filter.", additionalProperties: true }
       },
       required: ["field1", "field2"]
     }
   },
   {
     name: "get_time_series",
-    description: "Hämta tidsserie-data (longitudinella mätningar) för PSA, HbA1c eller eGFR. Returnerar medelvärden per tidpunkt, eventuellt grupperat per behandling/utfall/riskgrupp. PSA-tidpunkter: baseline, 3mo, 6mo, 12mo, 24mo. HbA1c/eGFR-tidpunkter: baseline, 6mo, 12mo, 24mo. Perfekt för frågor om 'hur utvecklas PSA efter behandling' eller 'hur påverkas HbA1c av ADT över tid'.",
+    description: "Hämta tidsserie-data (longitudinella mätningar) för PSA, HbA1c eller eGFR. Data deriverad från faktiska labbvärden i patientjournalerna. Returnerar medelvärden vid baseline, 3mo, 6mo, 12mo, 24mo relativt cancerdiagnos.",
     input_schema: {
       type: "object",
       properties: {
-        measure: {
-          type: "string",
-          enum: ["psa", "hba1c", "egfr"],
-          description: "Vilket mått att hämta tidsserie för: 'psa' (PSA ng/mL), 'hba1c' (HbA1c mmol/mol), 'egfr' (eGFR mL/min/1.73m²)."
-        },
-        group_by: {
-          type: "string",
-          description: "Valfritt: gruppera efter detta fält för jämförelser. T.ex. 't' för att se PSA-utveckling per behandling, 'o' per utfall, 'd' per diabetestyp."
-        },
-        filters: {
-          type: "object",
-          description: "Valfria filter. Samma format som search_patients.",
-          additionalProperties: true
-        }
+        measure: { type: "string", enum: ["psa", "hba1c", "egfr"], description: "Vilket mått." },
+        group_by: { type: "string", description: "Valfritt: gruppera efter fält." },
+        filters: { type: "object", description: "Valfria filter.", additionalProperties: true }
       },
       required: ["measure"]
     }
   },
   {
     name: "get_patient_time_series",
-    description: "Hämta detaljerade tidsserier för specifika individuella patienter (via patient-ID). Använd detta efter search_patients för att granska enskilda patienters förlopp i detalj.",
+    description: "Hämta tidsserier för specifika individuella patienter (via ID-nummer 1-100).",
     input_schema: {
       type: "object",
       properties: {
-        patient_ids: {
-          type: "array",
-          items: { type: "number" },
-          description: "Lista med patient-ID:n att hämta tidsserier för."
-        },
-        measures: {
-          type: "array",
-          items: { type: "string", enum: ["psa", "hba1c", "egfr"] },
-          description: "Vilka mått att inkludera. Default: alla tre."
-        }
+        patient_ids: { type: "array", items: { type: "number" }, description: "Patient-ID:n (1-100)." },
+        measures: { type: "array", items: { type: "string", enum: ["psa", "hba1c", "egfr"] }, description: "Vilka mått. Default: alla." }
       },
       required: ["patient_ids"]
+    }
+  },
+  {
+    name: "get_patient_detail",
+    description: "Hämta fullständig detaljerad information för en patient — demographics, klinisk profil, antal diagnoser/läkemedel/labprover/vårdkontakter. Använd patient_id (t.ex. 'P001') eller numeriskt ID (1-100).",
+    input_schema: {
+      type: "object",
+      properties: {
+        patient_id: { type: "string", description: "Patient-ID (t.ex. 'P001' eller '1')." }
+      },
+      required: ["patient_id"]
+    }
+  },
+  {
+    name: "get_patient_diagnoses",
+    description: "Hämta alla diagnoser (ICD-10) för en specifik patient. Visar diagnosdatum, ICD-kod, typ (H=huvud, B=bi), vårdgivare.",
+    input_schema: {
+      type: "object",
+      properties: {
+        patient_id: { type: "string", description: "Patient-ID (t.ex. 'P001')." }
+      },
+      required: ["patient_id"]
+    }
+  },
+  {
+    name: "get_patient_medications",
+    description: "Hämta alla läkemedel (med ATC-koder, doseringar, förskrivare) för en specifik patient.",
+    input_schema: {
+      type: "object",
+      properties: {
+        patient_id: { type: "string", description: "Patient-ID (t.ex. 'P001')." }
+      },
+      required: ["patient_id"]
+    }
+  },
+  {
+    name: "get_patient_lab_results",
+    description: "Hämta labbresultat för en specifik patient. Kan filtreras på analysnamn (t.ex. 'PSA', 'HbA1c', 'kreatinin').",
+    input_schema: {
+      type: "object",
+      properties: {
+        patient_id: { type: "string", description: "Patient-ID (t.ex. 'P001')." },
+        lab_name: { type: "string", description: "Valfritt: filtrera på analysnamn (t.ex. 'PSA', 'HbA1c')." }
+      },
+      required: ["patient_id"]
+    }
+  },
+  {
+    name: "get_patient_care_documentation",
+    description: "Hämta journalanteckningar/vårdsammanfattningar för en patient. Innehåller fritext från mottagningsbesök, vårdkontakter etc.",
+    input_schema: {
+      type: "object",
+      properties: {
+        patient_id: { type: "string", description: "Patient-ID (t.ex. 'P001')." }
+      },
+      required: ["patient_id"]
+    }
+  },
+  {
+    name: "get_patient_imaging",
+    description: "Hämta bilddiagnostik-resultat (MR, CT, skelettscint) för en patient. Innehåller modalitet, remittent, utlåtande.",
+    input_schema: {
+      type: "object",
+      properties: {
+        patient_id: { type: "string", description: "Patient-ID (t.ex. 'P001')." }
+      },
+      required: ["patient_id"]
+    }
+  },
+  {
+    name: "get_patient_referrals",
+    description: "Hämta PAD-svar, remisser och konsultationssvar för en patient.",
+    input_schema: {
+      type: "object",
+      properties: {
+        patient_id: { type: "string", description: "Patient-ID (t.ex. 'P001')." }
+      },
+      required: ["patient_id"]
+    }
+  },
+  {
+    name: "get_patient_care_contacts",
+    description: "Hämta alla vårdkontakter (besök, telefonkontakter, dagkirurgi etc.) för en patient.",
+    input_schema: {
+      type: "object",
+      properties: {
+        patient_id: { type: "string", description: "Patient-ID (t.ex. 'P001')." }
+      },
+      required: ["patient_id"]
+    }
+  },
+  {
+    name: "get_patient_vaccinations",
+    description: "Hämta vaccinationshistorik för en patient.",
+    input_schema: {
+      type: "object",
+      properties: {
+        patient_id: { type: "string", description: "Patient-ID (t.ex. 'P001')." }
+      },
+      required: ["patient_id"]
+    }
+  },
+  {
+    name: "get_patient_care_plans",
+    description: "Hämta vårdplaner för en patient.",
+    input_schema: {
+      type: "object",
+      properties: {
+        patient_id: { type: "string", description: "Patient-ID (t.ex. 'P001')." }
+      },
+      required: ["patient_id"]
+    }
+  },
+  {
+    name: "get_patient_alerts",
+    description: "Hämta varningar/uppmärksamhetsinformation för en patient (t.ex. allergier, allvarliga sjukdomar).",
+    input_schema: {
+      type: "object",
+      properties: {
+        patient_id: { type: "string", description: "Patient-ID (t.ex. 'P001')." }
+      },
+      required: ["patient_id"]
+    }
+  },
+  {
+    name: "search_medications",
+    description: "Sök läkemedel i hela kohorten. Filtrera på ATC-kod (t.ex. 'A10BA' för metformin-gruppen) och/eller produktnamn. Kan kombineras med patientfilter.",
+    input_schema: {
+      type: "object",
+      properties: {
+        atc_code: { type: "string", description: "ATC-kod eller prefix (t.ex. 'A10BA02' eller 'L02')." },
+        product_name: { type: "string", description: "Produktnamn att söka på (delvis matchning)." },
+        filters: { type: "object", description: "Patientfilter (samma som search_patients).", additionalProperties: true }
+      },
+      required: []
+    }
+  },
+  {
+    name: "get_medication_statistics",
+    description: "Hämta statistik över läkemedelsanvändning i kohorten: vanligaste läkemedlen, ATC-grupper. Kan filtreras på patientegenskaper.",
+    input_schema: {
+      type: "object",
+      properties: {
+        filters: { type: "object", description: "Patientfilter.", additionalProperties: true }
+      },
+      required: []
+    }
+  },
+  {
+    name: "search_diagnoses",
+    description: "Sök diagnoser (ICD-10) i hela kohorten. Hitta alla patienter med en viss diagnoskod.",
+    input_schema: {
+      type: "object",
+      properties: {
+        icd_code: { type: "string", description: "ICD-10-kod eller prefix (t.ex. 'E11' för diabetes typ 2, 'I10' för hypertoni)." },
+        filters: { type: "object", description: "Patientfilter.", additionalProperties: true }
+      },
+      required: []
+    }
+  },
+  {
+    name: "search_care_documentation",
+    description: "Sök i journalanteckningar (fritext) i hela kohorten. Hitta patienter vars journaltext innehåller ett visst sökord.",
+    input_schema: {
+      type: "object",
+      properties: {
+        search_term: { type: "string", description: "Sökterm att leta efter i journaltexter." },
+        filters: { type: "object", description: "Patientfilter.", additionalProperties: true }
+      },
+      required: ["search_term"]
     }
   }
 ];
@@ -151,6 +293,36 @@ function executeTool(name, input) {
       return db.getTimeSeries(input.measure, input.group_by, input.filters);
     case "get_patient_time_series":
       return db.getPatientTimeSeries(input.patient_ids, input.measures);
+    case "get_patient_detail":
+      return db.getPatientDetail(input.patient_id);
+    case "get_patient_diagnoses":
+      return db.getPatientDiagnoses(input.patient_id);
+    case "get_patient_medications":
+      return db.getPatientMedications(input.patient_id);
+    case "get_patient_lab_results":
+      return db.getPatientLabResults(input.patient_id, input.lab_name);
+    case "get_patient_care_documentation":
+      return db.getPatientCareDocumentation(input.patient_id);
+    case "get_patient_imaging":
+      return db.getPatientImaging(input.patient_id);
+    case "get_patient_referrals":
+      return db.getPatientReferrals(input.patient_id);
+    case "get_patient_care_contacts":
+      return db.getPatientCareContacts(input.patient_id);
+    case "get_patient_vaccinations":
+      return db.getPatientVaccinations(input.patient_id);
+    case "get_patient_care_plans":
+      return db.getPatientCarePlans(input.patient_id);
+    case "get_patient_alerts":
+      return db.getPatientAlerts(input.patient_id);
+    case "search_medications":
+      return db.searchMedications(input.atc_code, input.product_name, input.filters);
+    case "get_medication_statistics":
+      return db.getMedicationStatistics(input.filters);
+    case "search_diagnoses":
+      return db.searchDiagnoses(input.icd_code, input.filters);
+    case "search_care_documentation":
+      return db.searchCareDocumentation(input.search_term, input.filters);
     default:
       return { error: "Unknown tool: " + name };
   }
@@ -158,35 +330,33 @@ function executeTool(name, input) {
 
 var SYSTEM_PROMPT = "Du är en klinisk dataanalytiker med tillgång till en patientkohort via databasverktyg.\n\n"
   + "KOHORT: 100 män 50-65 år med prostatacancer (C61) + insulinbehandlad diabetes (E10/E11). Syntetisk data baserad på svensk epidemiologi.\n\n"
-  + "TILLGÄNGLIGA FÄLT:\n"
-  + "- a: Ålder (50-65 år)\n"
-  + "- r: Riskgrupp (very_low, low, intermediate_fav, intermediate_unfav, high, very_high_metastatic)\n"
-  + "- g: Gleason (3+3=6, 3+4=7, 4+3=7, 4+4=8, 4+5=9, 5+4=9)\n"
-  + "- p: PSA vid diagnos (ng/mL)\n"
+  + "TILLGÄNGLIGA FÄLT (kompakt format):\n"
+  + "- a: Ålder (50-65), r: Riskgrupp, g: Gleason, p: PSA vid diagnos\n"
+  + "- isup: ISUP-grad (1-5), tnm: TNM-stadium, pirads: PI-RADS (1-5)\n"
+  + "- cores_pos/cores_total: Positiva/totala biopsikolvar\n"
   + "- t: Behandling (EBRT, RALP, EBRT_ADT, active_surveillance, RALP_adj, palliative, ADT_only, ADT_chemo)\n"
   + "- o: Utfall (curative_good, curative_side_effects, biochemical_recurrence, local_progression, stable_AS, deceased_cancer, deceased_other, partial_response, reclassified_to_treatment, progression)\n"
-  + "- d: Diabetestyp (T1, T2)\n"
-  + "- dd: Diabetesduration (år)\n"
-  + "- h: HbA1c (mmol/mol)\n"
-  + "- b: BMI\n"
-  + "- e: eGFR (mL/min/1.73m²)\n"
-  + "- ht: Hypertoni (0/1)\n"
-  + "- rt: Retinopati (0/1)\n"
-  + "- nf: Nefropati (0/1)\n"
-  + "- kd: Kardiovaskulär sjukdom (0/1)\n\n"
-  + "LONGITUDINELLA TIDSSERIER (per patient):\n"
-  + "- psa_series: PSA-värden vid baseline, 3mo, 6mo, 12mo, 24mo\n"
-  + "- hba1c_series: HbA1c-värden vid baseline, 6mo, 12mo, 24mo\n"
-  + "- egfr_series: eGFR-värden vid baseline, 6mo, 12mo, 24mo\n"
-  + "Använd get_time_series för aggregerade trender och get_patient_time_series för individuella förlopp.\n\n"
+  + "- d: Diabetestyp (T1, T2), dd: Diabetesduration (år), h: HbA1c (mmol/mol)\n"
+  + "- b: BMI, e: eGFR (mL/min/1.73m²)\n"
+  + "- ht: Hypertoni, hk: Hyperkolesterolemi, ov: Övervikt, rt: Retinopati, nf: Nefropati, np: Neuropati, kd: Kardiovaskulär sjukdom (alla 0/1)\n"
+  + "- municipality: Kommun, hospital: Sjukhus\n\n"
+  + "RIKDATA PER PATIENT (NPÖ-format):\n"
+  + "Varje patient har fullständiga journaldata: diagnoser (ICD-10), läkemedel (ATC-koder + doseringar), labbresultat (med datum och värden), journalanteckningar (fritext), bilddiagnostik, PAD-svar, vårdkontakter, vaccinationer, vårdplaner, varningar.\n"
+  + "Använd get_patient_detail för att se en patients profil. Använd get_patient_medications, get_patient_lab_results, get_patient_care_documentation etc. för detaljer.\n"
+  + "Använd search_medications, search_diagnoses, search_care_documentation för att söka i hela kohorten.\n\n"
+  + "TIDSSERIER (deriverade från faktiska labbvärden):\n"
+  + "- psa_series: PSA-värden vid baseline, 3mo, 6mo, 12mo, 24mo relativt cancerdiagnos\n"
+  + "- hba1c_series: HbA1c-värden vid samma tidpunkter\n"
+  + "- egfr_series: eGFR-värden vid samma tidpunkter\n\n"
   + "INSTRUKTIONER:\n"
   + "1. Använd ALLTID verktygen för att hämta data. Gissa aldrig siffror.\n"
-  + "2. Gör flera verktygsanrop om det behövs för att svara fullständigt.\n"
+  + "2. Gör flera verktygsanrop om det behövs.\n"
   + "3. Svara på svenska med åäö.\n"
   + "4. Ange exakta siffror: antal, procent, medelvärden.\n"
   + "5. Skriv 4-10 meningar ren löptext. Ingen markdown (inga **, #, punktlistor). Inga taggar.\n"
-  + "6. Om frågan gäller enskilda patienter, använd search_patients och nämn relevanta detaljer.\n"
-  + "7. För tidsseriefrågor (utveckling över tid, trender, förlopp), använd get_time_series. Gruppera gärna per behandling eller utfall för jämförelser.";
+  + "6. Om frågan gäller enskilda patienter, hämta detaljer med get_patient_detail etc.\n"
+  + "7. För läkemedelsfrågor, använd search_medications eller get_medication_statistics.\n"
+  + "8. För journaltextfrågor, använd search_care_documentation.";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -208,10 +378,9 @@ export default async function handler(req, res) {
   var messages = [{ role: "user", content: userMessage }];
 
   try {
-    // Tool use loop — max 5 iterationer
-    var maxIterations = 5;
+    var maxIterations = 8;
     var finalText = "";
-    var toolTrace = []; // Spåra alla verktygsanrop för transparens
+    var toolTrace = [];
 
     for (var i = 0; i < maxIterations; i++) {
       var body = {
@@ -238,7 +407,6 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: data.error.message || data.error });
       }
 
-      // Samla text och tool_use blocks
       var textParts = [];
       var toolUses = [];
 
@@ -251,15 +419,12 @@ export default async function handler(req, res) {
 
       finalText += textParts.join("");
 
-      // Om inga tool_use, eller stop_reason !== "tool_use", är vi klara
       if (data.stop_reason !== "tool_use" || toolUses.length === 0) {
         break;
       }
 
-      // Lägg till assistantens svar i meddelandehistoriken
       messages.push({ role: "assistant", content: data.content });
 
-      // Exekvera alla verktygsanrop, spara trace, skicka resultat
       var toolResults = toolUses.map(function(tu) {
         var result = executeTool(tu.name, tu.input);
         toolTrace.push({
