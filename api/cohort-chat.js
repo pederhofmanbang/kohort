@@ -211,6 +211,7 @@ export default async function handler(req, res) {
     // Tool use loop — max 5 iterationer
     var maxIterations = 5;
     var finalText = "";
+    var toolTrace = []; // Spåra alla verktygsanrop för transparens
 
     for (var i = 0; i < maxIterations; i++) {
       var body = {
@@ -258,9 +259,14 @@ export default async function handler(req, res) {
       // Lägg till assistantens svar i meddelandehistoriken
       messages.push({ role: "assistant", content: data.content });
 
-      // Exekvera alla verktygsanrop och skicka resultat
+      // Exekvera alla verktygsanrop, spara trace, skicka resultat
       var toolResults = toolUses.map(function(tu) {
         var result = executeTool(tu.name, tu.input);
+        toolTrace.push({
+          tool: tu.name,
+          input: tu.input,
+          result: result
+        });
         return {
           type: "tool_result",
           tool_use_id: tu.id,
@@ -272,7 +278,8 @@ export default async function handler(req, res) {
     }
 
     res.status(200).json({
-      content: [{ type: "text", text: finalText }]
+      content: [{ type: "text", text: finalText }],
+      tool_trace: toolTrace
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
