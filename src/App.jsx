@@ -8,7 +8,8 @@ var CHARTS_DB = {"riskgrupp": {"chartType": "bar", "title": "Fördelning av canc
 var PROMPT_KOHORT = "Du är en klinisk dataanalytiker. Svara på svenska med åäö.\n\n"
   + "KOHORTDATA:\n" + JSON.stringify(COHORT) + "\n\n"
   + "Analysera kohortdatan baserat på användarens fråga. Ange specifika siffror: antal patienter, procent, medelvärden.\n"
-  + "Skriv 4-8 meningar ren löptext. Ingen markdown (inga **, #, punktlistor). Inga taggar.";
+  + "Skriv 4-8 meningar ren löptext. Ingen markdown (inga **, #, punktlistor). Inga taggar."
+  + VIZ_INSTRUCTION;
 
 var PATIENT_KEY = "Fältnycklar: a=ålder, r=riskgrupp, g=Gleason, p=PSA vid diagnos, t=behandling (EBRT/RALP/EBRT_ADT/active_surveillance/RALP_adj/palliative/ADT_only/ADT_chemo), o=utfall, d=diabetestyp (T1/T2), dd=diabetesduration år, h=HbA1c mmol/mol, b=BMI, e=eGFR, ht=hypertoni(0/1), rt=retinopati(0/1), nf=nefropati(0/1), kd=kardiovaskulär(0/1)";
 
@@ -18,7 +19,8 @@ var PROMPT_KOHORT_DETAIL = "Du är en klinisk dataanalytiker. Svara på svenska 
   + "INDIVIDUELLA PATIENTER (n=100):\n" + JSON.stringify(PATIENTS) + "\n\n"
   + "Du har tillgång till ALLA individuella patientdata. Räkna exakt — filtrera arrayen mentalt baserat på frågan.\n"
   + "Ange exakta antal, lista specifika patienter om relevant (t.ex. 'Patient 4: ålder 54, PSA 3.8, aktiv övervakning').\n"
-  + "Skriv 4-10 meningar ren löptext. Ingen markdown. Inga taggar.";
+  + "Skriv 4-10 meningar ren löptext. Ingen markdown. Inga taggar."
+  + VIZ_INSTRUCTION;
 
 // PubMed-sökning bygger en MeSH-liknande query från användarens fråga
 var PUBMED_KEYWORDS = {
@@ -142,10 +144,47 @@ function cleanMd(r) {
     .replace(/^#{1,4}\s*/gm,"").replace(/`([^`]+)`/g,"$1").replace(/\n{3,}/g,"\n\n").trim();
 }
 
+// ========== AI-GENERERADE VISUALISERINGAR ==========
+var VIZ_INSTRUCTION = "\n\nOM användaren ber om en tabell, ett diagram, eller en visualisering som INTE redan visas automatiskt, "
+  + "kan du returnera strukturerad data i ett speciellt block. Lägg det EFTER din textanalys.\n"
+  + "Format: <<<VIZ>>> { JSON } <<<END>>>\n\n"
+  + "Stödda typer:\n"
+  + '1. Tabell: {"vizType":"table","title":"...","columns":["Kolumn1","Kolumn2"],"rows":[["rad1kol1","rad1kol2"],["rad2kol1","rad2kol2"]]}\n'
+  + '2. Stapeldiagram: {"vizType":"bar","title":"...","data":[{"name":"A","value":10},{"name":"B","value":20}]}\n'
+  + '3. Cirkeldiagram: {"vizType":"pie","title":"...","data":[{"name":"A","value":60},{"name":"B","value":40}]}\n'
+  + '4. Grupperat stapeldiagram: {"vizType":"grouped_bar","title":"...","categories":["A","B"],"series":[{"name":"Serie1","data":[10,20]},{"name":"Serie2","data":[15,25]}]}\n'
+  + '5. Linjediagram: {"vizType":"line","title":"...","data":[{"name":"2020","value":10},{"name":"2021","value":15}]}\n\n'
+  + "Använd BARA VIZ-block när användaren uttryckligen ber om en visualisering, tabell, eller jämförelse. "
+  + "Skapa data baserat på kohorten. Du kan skapa flera VIZ-block i samma svar.\n"
+  + "VIKTIGT: VIZ-blocket ska innehålla giltig JSON. Inga kommentarer i JSON.";
+
+function parseVizBlocks(text) {
+  var vizzes = [];
+  var clean = text;
+  var re = /<<<VIZ>>>\s*([\s\S]*?)\s*<<<END>>>/g;
+  var match;
+  while ((match = re.exec(text)) !== null) {
+    try {
+      var parsed = JSON.parse(match[1]);
+      if (parsed.vizType) {
+        // Map vizType to chartType for compatibility with ChartVis
+        if (parsed.vizType !== "table") {
+          parsed.chartType = parsed.vizType;
+        }
+        vizzes.push(parsed);
+      }
+    } catch (e) {
+      // Ogiltigt JSON — ignorera
+    }
+  }
+  clean = clean.replace(/<<<VIZ>>>\s*[\s\S]*?\s*<<<END>>>/g, "").trim();
+  return { text: clean, vizzes: vizzes };
+}
+
 function apiCall(sysPrompt, userMsg, signal) {
   var body = {
     model: "claude-sonnet-4-20250514",
-    max_tokens: 1024,
+    max_tokens: 2048,
     system: sysPrompt,
     messages: [{ role: "user", content: userMsg }]
   };
@@ -162,7 +201,8 @@ function apiCall(sysPrompt, userMsg, signal) {
     var text = "";
     if (d.content) d.content.forEach(function(b) { if (b.type === "text") text += b.text; });
     if (!text) throw new Error("Tomt svar från API");
-    return cleanMd(text);
+    var parsed = parseVizBlocks(text);
+    return { text: cleanMd(parsed.text), vizzes: parsed.vizzes };
   });
 }
 
@@ -262,6 +302,30 @@ function ChartVis(props) {
         <Bar dataKey="value" radius={[4, 4, 0, 0]}>{data.map(function(d, i) { return <Cell key={i} fill={COLORS[i % COLORS.length]} />; })}</Bar>
       </BarChart></ResponsiveContainer>
     </div>);
+}
+
+function TableVis(props) {
+  var t = props.data; if (!t) return null;
+  var cols = t.columns || []; var rows = t.rows || []; var title = t.title || "";
+  return (
+    <div style={{ padding: 12 }}>
+      {title && <div style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", marginBottom: 8, textAlign: "center" }}>{title}</div>}
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+          <thead>
+            <tr>{cols.map(function(c, i) {
+              return <th key={i} style={{ padding: "6px 10px", borderBottom: "2px solid #e2e8f0", background: "#f8fafc", textAlign: "left", fontWeight: 600, color: "#334155", whiteSpace: "nowrap" }}>{c}</th>;
+            })}</tr>
+          </thead>
+          <tbody>{rows.map(function(row, ri) {
+            return <tr key={ri} style={{ background: ri % 2 === 0 ? "white" : "#f8fafc" }}>{(Array.isArray(row) ? row : []).map(function(cell, ci) {
+              return <td key={ci} style={{ padding: "5px 10px", borderBottom: "1px solid #f1f5f9", color: "#475569" }}>{cell}</td>;
+            })}</tr>;
+          })}</tbody>
+        </table>
+      </div>
+    </div>
+  );
 }
 
 function Metric(props) {
@@ -1189,10 +1253,13 @@ export default function App() {
     // ===== BARA KOHORT =====
     if (wantKohort && !wantPubmed) {
       var kp = (currentMode === "viz") ? PROMPT_KOHORT_SHORT : (currentDepth === "detaljerad") ? PROMPT_KOHORT_DETAIL : PROMPT_KOHORT;
-      apiCall(kp, q, ctrl.signal).then(function(kohortText) {
+      apiCall(kp, q, ctrl.signal).then(function(result) {
+        if (result.vizzes && result.vizzes.length > 0) {
+          setCharts(function(prev) { return prev.concat(result.vizzes); });
+        }
         setSteps(function(prev) {
           var next = Object.assign({}, prev);
-          next[msgIdx] = Object.assign({}, next[msgIdx], { kohort: kohortText, loading: null });
+          next[msgIdx] = Object.assign({}, next[msgIdx], { kohort: result.text, loading: null });
           return next;
         });
         done();
@@ -1221,10 +1288,13 @@ export default function App() {
     // ===== BÅDA (kohort → pubmed → syntes) =====
     var kohortPrompt = (currentMode === "viz") ? PROMPT_KOHORT_SHORT : (currentDepth === "detaljerad") ? PROMPT_KOHORT_DETAIL : PROMPT_KOHORT;
     apiCall(kohortPrompt, q, ctrl.signal)
-    .then(function(kohortText) {
+    .then(function(result) {
+      if (result.vizzes && result.vizzes.length > 0) {
+        setCharts(function(prev) { return prev.concat(result.vizzes); });
+      }
       setSteps(function(prev) {
         var next = Object.assign({}, prev);
-        next[msgIdx] = Object.assign({}, next[msgIdx], { kohort: kohortText, loading: "pubmed" });
+        next[msgIdx] = Object.assign({}, next[msgIdx], { kohort: result.text, loading: "pubmed" });
         return next;
       });
       return pubmedCall(q, ctrl.signal).then(function(pubmedResult) {
@@ -1238,14 +1308,17 @@ export default function App() {
           });
           return next;
         });
-        var syntesPrompt = buildSyntesPrompt(kohortText, pubmedResult.summary);
+        var syntesPrompt = buildSyntesPrompt(result.text, pubmedResult.summary);
         return apiCall(syntesPrompt, q, ctrl.signal);
       });
     })
-    .then(function(syntesText) {
+    .then(function(syntesResult) {
+      if (syntesResult.vizzes && syntesResult.vizzes.length > 0) {
+        setCharts(function(prev) { return prev.concat(syntesResult.vizzes); });
+      }
       setSteps(function(prev) {
         var next = Object.assign({}, prev);
-        next[msgIdx] = Object.assign({}, next[msgIdx], { syntes: syntesText, loading: null });
+        next[msgIdx] = Object.assign({}, next[msgIdx], { syntes: syntesResult.text, loading: null });
         return next;
       });
       done();
@@ -1471,7 +1544,7 @@ export default function App() {
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#94a3b8", fontSize: 12, textAlign: "center", padding: 30 }}>
                       <div><div style={{ fontSize: 28, marginBottom: 8, opacity: 0.3 }}>☰</div><div>Ställ en fråga så genereras ett diagram</div></div>
                     </div>)}
-                  {charts.map(function(ch, i) { return <div key={i} style={{ borderBottom: i < charts.length - 1 ? "1px solid #f1f5f9" : "none" }}><ChartVis data={ch} /></div>; })}
+                  {charts.map(function(ch, i) { return <div key={i} style={{ borderBottom: i < charts.length - 1 ? "1px solid #f1f5f9" : "none" }}>{ch.vizType === "table" ? <TableVis data={ch} /> : <ChartVis data={ch} />}</div>; })}
                 </div>
               </div>
             </div>
