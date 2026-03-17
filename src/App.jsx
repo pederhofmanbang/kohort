@@ -85,7 +85,8 @@ function buildSyntesPrompt(kohortText, pubmedText) {
     + "PUBMED-EVIDENS:\n" + pubmedText + "\n\n"
     + "Väg samman dessa. Ge en sammanvägd klinisk bedömning med konkreta rekommendationer.\n"
     + "Notera om kohortfynden stämmer med eller avviker från publicerad forskning.\n"
-    + "Skriv 4-8 meningar ren löptext. Ingen markdown. Inga taggar.";
+    + "Skriv 4-8 meningar ren löptext. Ingen markdown. Inga taggar."
+    + VIZ_INSTRUCTION;
 }
 
 var PROMPT_KOHORT_SHORT = "Du är en klinisk dataanalytiker. Svara på svenska. Kort (2 meningar).\n"
@@ -145,18 +146,20 @@ function cleanMd(r) {
 }
 
 // ========== AI-GENERERADE VISUALISERINGAR ==========
-var VIZ_INSTRUCTION = "\n\nOM användaren ber om en tabell, ett diagram, eller en visualisering som INTE redan visas automatiskt, "
-  + "kan du returnera strukturerad data i ett speciellt block. Lägg det EFTER din textanalys.\n"
+var VIZ_INSTRUCTION = "\n\nVIKTIGT — VISUALISERINGAR:\n"
+  + "Du har ALDRIG tillåtelse att skriva markdown-tabeller (|kolumn|) eller markdown-diagram i texten. "
+  + "All tabulär eller grafisk data MÅSTE returneras som ett VIZ-block som renderas i en separat visualiseringspanel.\n\n"
+  + "När användaren ber om en tabell, diagram, jämförelse, översikt eller liknande — eller när ditt svar naturligt skulle innehålla tabulär data — "
+  + "returnera ett VIZ-block EFTER din löptext.\n"
   + "Format: <<<VIZ>>> { JSON } <<<END>>>\n\n"
   + "Stödda typer:\n"
-  + '1. Tabell: {"vizType":"table","title":"...","columns":["Kolumn1","Kolumn2"],"rows":[["rad1kol1","rad1kol2"],["rad2kol1","rad2kol2"]]}\n'
-  + '2. Stapeldiagram: {"vizType":"bar","title":"...","data":[{"name":"A","value":10},{"name":"B","value":20}]}\n'
-  + '3. Cirkeldiagram: {"vizType":"pie","title":"...","data":[{"name":"A","value":60},{"name":"B","value":40}]}\n'
-  + '4. Grupperat stapeldiagram: {"vizType":"grouped_bar","title":"...","categories":["A","B"],"series":[{"name":"Serie1","data":[10,20]},{"name":"Serie2","data":[15,25]}]}\n'
-  + '5. Linjediagram: {"vizType":"line","title":"...","data":[{"name":"2020","value":10},{"name":"2021","value":15}]}\n\n'
-  + "Använd BARA VIZ-block när användaren uttryckligen ber om en visualisering, tabell, eller jämförelse. "
-  + "Skapa data baserat på kohorten. Du kan skapa flera VIZ-block i samma svar.\n"
-  + "VIKTIGT: VIZ-blocket ska innehålla giltig JSON. Inga kommentarer i JSON.";
+  + '1. Tabell: {"vizType":"table","title":"Titel","columns":["Kol1","Kol2"],"rows":[["v1","v2"],["v3","v4"]]}\n'
+  + '2. Stapeldiagram: {"vizType":"bar","title":"Titel","data":[{"name":"A","value":10},{"name":"B","value":20}]}\n'
+  + '3. Cirkeldiagram: {"vizType":"pie","title":"Titel","data":[{"name":"A","value":60},{"name":"B","value":40}]}\n'
+  + '4. Grupperat stapeldiagram: {"vizType":"grouped_bar","title":"Titel","categories":["A","B"],"series":[{"name":"S1","data":[10,20]},{"name":"S2","data":[15,25]}]}\n'
+  + '5. Linjediagram: {"vizType":"line","title":"Titel","data":[{"name":"2020","value":10},{"name":"2021","value":15}]}\n\n'
+  + "Skapa data baserat på kohorten. Du kan inkludera flera VIZ-block i samma svar.\n"
+  + "VIKTIGT: VIZ-blocket ska innehålla giltig JSON. Inga kommentarer i JSON. Inga markdown-tabeller i löptexten.";
 
 function parseVizBlocks(text) {
   var vizzes = [];
