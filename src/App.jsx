@@ -210,6 +210,167 @@ function apiCall(sysPrompt, userMsg, signal) {
   });
 }
 
+// Databasdriven kohortanalys — Claude söker i patientdatabasen via tool_use
+function kohortDbCall(userMsg, wantViz, signal) {
+  var vizInstr = wantViz ? VIZ_INSTRUCTION : "";
+  return fetch("/api/cohort-chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    signal: signal,
+    body: JSON.stringify({ message: userMsg, vizInstruction: vizInstr })
+  }).then(function(r) {
+    if (!r.ok) return r.text().then(function(t) { throw new Error("API " + r.status + ": " + t.substring(0, 200)); });
+    return r.json();
+  }).then(function(d) {
+    if (d.error) throw new Error(d.error.message || d.error);
+    var text = "";
+    if (d.content) d.content.forEach(function(b) { if (b.type === "text") text += b.text; });
+    if (!text) throw new Error("Tomt svar från API");
+    var parsed = parseVizBlocks(text);
+    return { text: cleanMd(parsed.text), vizzes: parsed.vizzes, toolTrace: d.tool_trace || [] };
+  });
+}
+
+// ========== TOOL TRACE (transparensvy) ==========
+var TOOL_LABELS = {
+  search_patients: { icon: "\u{1F50D}", label: "Sök patienter", color: "#2563eb" },
+  get_statistics: { icon: "\u{1F4CA}", label: "Beräkna statistik", color: "#7c3aed" },
+  count_patients: { icon: "#\uFE0F\u20E3", label: "Räkna patienter", color: "#059669" },
+  cross_tabulate: { icon: "\u229E", label: "Korstabell", color: "#d97706" },
+  get_time_series: { icon: "\u{1F4C8}", label: "Tidsserie", color: "#dc2626" },
+  get_patient_time_series: { icon: "\u{1F464}", label: "Patientförlopp", color: "#0891b2" }
+};
+
+var FILTER_FIELD_LABELS = {
+  a: "ålder", r: "riskgrupp", g: "Gleason", p: "PSA", t: "behandling", o: "utfall",
+  d: "diabetestyp", dd: "diabetesduration", h: "HbA1c", b: "BMI", e: "eGFR",
+  ht: "hypertoni", rt: "retinopati", nf: "nefropati", kd: "kardiovaskulär"
+};
+
+function formatToolInput(tool, input) {
+  if (!input) return "";
+  var parts = [];
+  if (input.filters && Object.keys(input.filters).length > 0) {
+    Object.keys(input.filters).forEach(function(k) {
+      var label = FILTER_FIELD_LABELS[k] || k;
+      var val = input.filters[k];
+      if (typeof val === "object" && !Array.isArray(val)) {
+        if (val.min !== undefined && val.max !== undefined) parts.push(label + " " + val.min + "\u2013" + val.max);
+        else if (val.min !== undefined) parts.push(label + " \u2265" + val.min);
+        else if (val.max !== undefined) parts.push(label + " \u2264" + val.max);
+      } else if (Array.isArray(val)) {
+        parts.push(label + " = " + val.join("/"));
+      } else {
+        parts.push(label + " = " + val);
+      }
+    });
+  }
+  if (input.field) parts.push("fält: " + (FILTER_FIELD_LABELS[input.field] || input.field));
+  if (input.group_by) parts.push("grupperat per " + (FILTER_FIELD_LABELS[input.group_by] || input.group_by));
+  if (input.measure) parts.push(input.measure.toUpperCase());
+  if (input.field1 && input.field2) parts.push((FILTER_FIELD_LABELS[input.field1] || input.field1) + " \u00D7 " + (FILTER_FIELD_LABELS[input.field2] || input.field2));
+  if (input.patient_ids) parts.push("patient " + input.patient_ids.join(", "));
+  if (input.fields) parts.push("visa: " + input.fields.map(function(f){return FILTER_FIELD_LABELS[f]||f;}).join(", "));
+  if (input.limit) parts.push("max " + input.limit);
+  return parts.join(" \u00B7 ");
+}
+
+function formatToolResult(tool, result) {
+  if (!result) return "";
+  if (result.error) return "Fel: " + result.error;
+  var parts = [];
+  if (result.total_matches !== undefined) parts.push(result.total_matches + " tr\u00E4ffar, visar " + result.returned);
+  if (result.count !== undefined) parts.push(result.count + " av " + result.total + " (" + result.percentage + "%)");
+  if (result.type === "numeric") parts.push("medel " + result.mean + ", median " + result.median + ", min " + result.min + ", max " + result.max);
+  if (result.type === "distribution") {
+    var dist = result.distribution;
+    var items = Object.keys(dist).sort(function(a,b){return dist[b]-dist[a];}).slice(0,5).map(function(k){return k + ": " + dist[k];});
+    parts.push(items.join(", "));
+  }
+  if (result.type === "grouped_numeric" && result.groups) {
+    var gk = Object.keys(result.groups).slice(0,4);
+    gk.forEach(function(k) { parts.push(k + ": medel " + result.groups[k].mean + " (n=" + result.groups[k].n + ")"); });
+    if (Object.keys(result.groups).length > 4) parts.push("+" + (Object.keys(result.groups).length - 4) + " till...");
+  }
+  if (result.timepoints && result.mean_values) {
+    parts.push(result.timepoints.map(function(tp){return tp + ": " + result.mean_values[tp];}).join(" \u2192 "));
+  }
+  if (result.groups && result.timepoints && !result.mean_values) {
+    var gKeys = Object.keys(result.groups).slice(0,3);
+    gKeys.forEach(function(k) {
+      var vals = result.groups[k].mean_values;
+      parts.push(k + " (n=" + result.groups[k].n + "): " + result.timepoints.map(function(tp){return vals[tp];}).join(" \u2192 "));
+    });
+    if (Object.keys(result.groups).length > 3) parts.push("+" + (Object.keys(result.groups).length - 3) + " till...");
+  }
+  if (result.patients) parts.push(result.patients.length + " patientf\u00F6rlopp");
+  if (result.table) parts.push(result.values_field1.length + " \u00D7 " + result.values_field2.length + " celler");
+  return parts.join(" \u00B7 ") || JSON.stringify(result).substring(0, 100);
+}
+
+function ToolTracePanel(props) {
+  var trace = props.trace || [];
+  var openS = useState(false); var isOpen = openS[0]; var setOpen = openS[1];
+  var detailS = useState(null); var detailIdx = detailS[0]; var setDetail = detailS[1];
+  if (trace.length === 0) return null;
+  return (
+    <div style={{ marginTop: 6, marginBottom: 4 }}>
+      <button onClick={function(){setOpen(!isOpen); if (isOpen) setDetail(null);}} style={{
+        display: "flex", alignItems: "center", gap: 6, padding: "5px 10px",
+        background: isOpen ? "#f0f9ff" : "transparent", border: "1px solid " + (isOpen ? "#bae6fd" : "#e2e8f0"),
+        borderRadius: 6, cursor: "pointer", fontSize: 10, color: "#0369a1", fontWeight: 500, width: "100%"
+      }}>
+        <span style={{ transform: isOpen ? "rotate(90deg)" : "none", transition: "transform 0.15s", display: "inline-block", fontSize: 8 }}>{"\u25B6"}</span>
+        <span style={{ background: "#e0f2fe", padding: "1px 6px", borderRadius: 3, fontSize: 9, fontWeight: 700, color: "#0c4a6e" }}>{trace.length}</span>
+        <span>databass\u00F6kningar utf\u00F6rda</span>
+        <span style={{ marginLeft: "auto", fontSize: 9, color: "#94a3b8" }}>{isOpen ? "d\u00F6lj" : "visa transparens"}</span>
+      </button>
+      {isOpen && (
+        <div style={{ marginTop: 4, borderLeft: "2px solid #bae6fd", marginLeft: 6, paddingLeft: 8 }}>
+          {trace.map(function(t, i) {
+            var meta = TOOL_LABELS[t.tool] || { icon: "\u2699", label: t.tool, color: "#64748b" };
+            var isExpanded = detailIdx === i;
+            return (
+              <div key={i} style={{ marginBottom: 4 }}>
+                <button onClick={function(){setDetail(isExpanded ? null : i);}} style={{
+                  display: "flex", alignItems: "flex-start", gap: 6, padding: "5px 8px", width: "100%",
+                  background: isExpanded ? "#f8fafc" : "white", border: "1px solid #e2e8f0",
+                  borderRadius: 5, cursor: "pointer", textAlign: "left"
+                }}>
+                  <span style={{ fontSize: 11, flexShrink: 0 }}>{meta.icon}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
+                      <span style={{
+                        fontSize: 9, fontWeight: 700, color: "white", background: meta.color,
+                        padding: "1px 5px", borderRadius: 3, flexShrink: 0
+                      }}>{meta.label}</span>
+                      <span style={{ fontSize: 10, color: "#475569", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {formatToolInput(t.tool, t.input)}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 9, color: "#64748b", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: isExpanded ? "normal" : "nowrap" }}>
+                      {"\u2192"} {formatToolResult(t.tool, t.result)}
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 9, color: "#94a3b8", flexShrink: 0, marginTop: 1 }}>{isExpanded ? "\u25BC" : "\u25B7"}</span>
+                </button>
+                {isExpanded && (
+                  <div style={{ margin: "3px 0 3px 20px", padding: 8, background: "#f1f5f9", borderRadius: 4, fontSize: 9, fontFamily: "monospace", lineHeight: 1.5, maxHeight: 200, overflowY: "auto", whiteSpace: "pre-wrap", wordBreak: "break-word", color: "#334155" }}>
+                    <div style={{ color: "#0369a1", marginBottom: 4, fontWeight: 600 }}>INPUT:</div>
+                    {JSON.stringify(t.input, null, 2)}
+                    <div style={{ color: "#0369a1", marginTop: 8, marginBottom: 4, fontWeight: 600 }}>RESULTAT:</div>
+                    {JSON.stringify(t.result, null, 2)}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ========== UI COMPONENTS ==========
 function Paras(props) {
   var t = props.text || "";
@@ -222,7 +383,7 @@ function Paras(props) {
 }
 
 var SECTION_STYLES = {
-  kohort: { b: "#2563eb", bg: "#f7f9ff", l: "■ VÅR KOHORTDATA — syntetisk (n=100)", lb: "#1e3a5f" },
+  kohort: { b: "#2563eb", bg: "#f7f9ff", l: "■ KOHORTDATABAS — sökning via tool_use (n=100)", lb: "#1e3a5f" },
   pubmed: { b: "#059669", bg: "#f4fdf9", l: "◆ PUBLICERAD EVIDENS (PubMed E-utilities)", lb: "#065f46" },
   syntes: { b: "#7c3aed", bg: "#faf5ff", l: "▶ SAMMANVÄGD BEDÖMNING", lb: "#6b21a8" }
 };
@@ -483,8 +644,8 @@ function LathundTab() {
         <path d="M340 128 L550 128 L550 156" fill="none" stroke="#059669" strokeWidth="1"/>
 
         <rect x="40" y="160" width="180" height="52" rx="8" fill="#E6F1FB" stroke="#2563eb" strokeWidth="0.5"/>
-        <text style={{ fontSize: 12, fontWeight: 600, fill: "#0C447C" }} x="130" y="182" textAnchor="middle">Steg 1: Kohort</text>
-        <text style={{ fontSize: 10, fill: "#185FA5" }} x="130" y="198" textAnchor="middle">Claude API, ~3 sek</text>
+        <text style={{ fontSize: 12, fontWeight: 600, fill: "#0C447C" }} x="130" y="182" textAnchor="middle">Steg 1: Kohortdatabas</text>
+        <text style={{ fontSize: 10, fill: "#185FA5" }} x="130" y="198" textAnchor="middle">Claude tool_use, ~5 sek</text>
 
         <rect x="255" y="160" width="170" height="52" rx="8" fill="#f1f5f9" stroke="#94a3b8" strokeWidth="0.5"/>
         <text style={{ fontSize: 12, fontWeight: 600, fill: "#334155" }} x="340" y="182" textAnchor="middle">Diagram</text>
@@ -508,8 +669,8 @@ function LathundTab() {
 
         <rect x="60" y="370" width="270" height="40" rx="6" fill="#E6F1FB" stroke="#2563eb" strokeWidth="0.5"/>
         <rect x="60" y="370" width="4" height="40" fill="#2563eb"/>
-        <text style={{ fontSize: 10, fontWeight: 600, fill: "#0C447C" }} x="76" y="386">■ VÅR KOHORTDATA</text>
-        <text style={{ fontSize: 9, fill: "#185FA5" }} x="76" y="400">Siffror från 100 patienter</text>
+        <text style={{ fontSize: 10, fontWeight: 600, fill: "#0C447C" }} x="76" y="386">■ KOHORTDATABAS (tool_use)</text>
+        <text style={{ fontSize: 9, fill: "#185FA5" }} x="76" y="400">Claude söker i databasen via verktyg</text>
 
         <rect x="350" y="370" width="270" height="40" rx="6" fill="#E1F5EE" stroke="#059669" strokeWidth="0.5"/>
         <rect x="350" y="370" width="4" height="40" fill="#059669"/>
@@ -526,17 +687,17 @@ function LathundTab() {
         <text style={{ fontSize: 10, fontWeight: 600, fill: "#334155" }} x="76" y="490">☰ DIAGRAM</text>
         <text style={{ fontSize: 9, fill: "#64748b" }} x="76" y="504">15 förberäknade diagramtyper, visas omedelbart</text>
 
-        <text style={{ fontSize: 10, fill: "#94a3b8" }} x="340" y="544" textAnchor="middle">Blått syns efter ~3 sek · Grönt efter ~8 sek · Lila efter ~11 sek · Diagram direkt</text>
+        <text style={{ fontSize: 10, fill: "#94a3b8" }} x="340" y="544" textAnchor="middle">Blått syns efter ~5 sek (tool_use loop) · Grönt efter ~10 sek · Lila efter ~13 sek · Diagram direkt</text>
         <text style={{ fontSize: 10, fill: "#94a3b8" }} x="340" y="562" textAnchor="middle">Du väljer källa: Kohort | PubMed | Båda + syntes</text>
       </svg>
 
       <div style={{ maxWidth: 700, margin: "16px auto", fontSize: 12, lineHeight: 1.7, color: "#334155" }}>
         <div style={{ fontWeight: 600, marginBottom: 6 }}>Datakällor</div>
-        <div style={{ marginBottom: 8 }}><span style={{ color: "#2563eb", fontWeight: 600 }}>Kohortdata</span> — 100 syntetiska patienter baserade på svensk epidemiologi. Prostatacancer (C61) + insulinbehandlad diabetes (E10/E11). Inkluderar riskgrupper, behandlingar, PSA, HbA1c, komorbiditeter och utfall.</div>
+        <div style={{ marginBottom: 8 }}><span style={{ color: "#2563eb", fontWeight: 600 }}>Kohortdatabas</span> — 100 syntetiska patienter i en backend-databas. Claude söker via tool_use med verktygen search_patients, get_statistics, count_patients och cross_tabulate. Claude bestämmer själv vilka sökningar som behövs — ingen data skickas i prompten. Skalbart till valfri kohort-storlek.</div>
         <div style={{ marginBottom: 8 }}><span style={{ color: "#059669", fontWeight: 600 }}>PubMed E-utilities</span> — Direkt sökning mot NCBI:s E-utilities API (eutils.ncbi.nlm.nih.gov). Svenska frågor översätts till engelska MeSH-termer. Abstracts hämtas i XML och sammanfattas på svenska av Claude.</div>
         <div style={{ marginBottom: 8 }}><span style={{ color: "#7c3aed", fontWeight: 600 }}>Sammanvägd bedömning</span> — Claude väger samman kohortanalys och PubMed-evidens till kliniska rekommendationer. Noterar om kohortfynd stämmer med publicerad forskning.</div>
         <div style={{ fontWeight: 600, marginTop: 12, marginBottom: 6 }}>Backend</div>
-        <div>Vercel serverless functions: /api/chat (proxy till Anthropic Claude API) och /api/pubmed (E-utilities + Claude-sammanfattning). React + Vite frontend. Diagram beräknas lokalt — 15 dataset matchas mot nyckelord.</div>
+        <div>Vercel serverless functions: /api/cohort-chat (Claude tool_use loop med patientdatabas), /api/chat (Claude API proxy), /api/pubmed (E-utilities + Claude-sammanfattning). React + Vite frontend. Diagram beräknas lokalt — 15 dataset matchas mot nyckelord.</div>
       </div>
     </div>
   );
@@ -1188,7 +1349,7 @@ export default function App() {
         syntes: s.syntes || "",
         mode: s.mode || "",
         src: s.src || "",
-        depth: s.loading ? "" : "done"
+        depth: s.loading ? "" : "databas"
       })
     })
     .then(function(r) { return r.json(); })
@@ -1209,7 +1370,7 @@ export default function App() {
     var q = text.trim();
     var currentMode = mode;
     var currentSrc = src;
-    var currentDepth = depth;
+    // depth inte längre relevant — Claude söker alltid all data via tool_use
     var userMsg = { role: "user", content: q };
     var newMsgs = msgs.concat([userMsg]);
     var msgIdx = newMsgs.length;
@@ -1256,14 +1417,13 @@ export default function App() {
 
     // ===== BARA KOHORT =====
     if (wantKohort && !wantPubmed) {
-      var kp = (currentMode === "viz") ? PROMPT_KOHORT_SHORT : (currentDepth === "detaljerad") ? PROMPT_KOHORT_DETAIL : PROMPT_KOHORT;
-      apiCall(kp, q, ctrl.signal).then(function(result) {
+      kohortDbCall(q, wantChart, ctrl.signal).then(function(result) {
         if (result.vizzes && result.vizzes.length > 0) {
           setCharts(function(prev) { return prev.concat(result.vizzes); });
         }
         setSteps(function(prev) {
           var next = Object.assign({}, prev);
-          next[msgIdx] = Object.assign({}, next[msgIdx], { kohort: result.text, loading: null });
+          next[msgIdx] = Object.assign({}, next[msgIdx], { kohort: result.text, toolTrace: result.toolTrace, loading: null });
           return next;
         });
         done();
@@ -1290,15 +1450,14 @@ export default function App() {
     }
 
     // ===== BÅDA (kohort → pubmed → syntes) =====
-    var kohortPrompt = (currentMode === "viz") ? PROMPT_KOHORT_SHORT : (currentDepth === "detaljerad") ? PROMPT_KOHORT_DETAIL : PROMPT_KOHORT;
-    apiCall(kohortPrompt, q, ctrl.signal)
+    kohortDbCall(q, wantChart, ctrl.signal)
     .then(function(result) {
       if (result.vizzes && result.vizzes.length > 0) {
         setCharts(function(prev) { return prev.concat(result.vizzes); });
       }
       setSteps(function(prev) {
         var next = Object.assign({}, prev);
-        next[msgIdx] = Object.assign({}, next[msgIdx], { kohort: result.text, loading: "pubmed" });
+        next[msgIdx] = Object.assign({}, next[msgIdx], { kohort: result.text, toolTrace: result.toolTrace, loading: "pubmed" });
         return next;
       });
       return pubmedCall(q, ctrl.signal).then(function(pubmedResult) {
@@ -1385,9 +1544,10 @@ export default function App() {
 
     return (
       <div style={{ marginBottom: 12 }}>
-        {showK && (s.kohort ? <Section type="kohort" text={s.kohort} /> : s.loading === "kohort" ? <Section type="kohort" loading={true} loadingText="Analyserar kohortdata…" /> : null)}
-        {showP && (s.pubmed ? <Section type="pubmed" text={s.pubmed} articles={s.articles} totalFound={s.totalFound} /> : s.loading === "pubmed" ? <Section type="pubmed" loading={true} loadingText="Söker PubMed (E-utilities)…" /> : null)}
-        {showS && (s.syntes ? <Section type="syntes" text={s.syntes} /> : s.loading === "syntes" ? <Section type="syntes" loading={true} loadingText="Genererar sammanvägd bedömning…" /> : null)}
+        {showK && (s.kohort ? <Section type="kohort" text={s.kohort} /> : s.loading === "kohort" ? <Section type="kohort" loading={true} loadingText="S\u00F6ker i kohortdatabas via tool_use\u2026" /> : null)}
+        {showK && s.toolTrace && s.toolTrace.length > 0 && <ToolTracePanel trace={s.toolTrace} />}
+        {showP && (s.pubmed ? <Section type="pubmed" text={s.pubmed} articles={s.articles} totalFound={s.totalFound} /> : s.loading === "pubmed" ? <Section type="pubmed" loading={true} loadingText="S\u00F6ker PubMed (E-utilities)\u2026" /> : null)}
+        {showS && (s.syntes ? <Section type="syntes" text={s.syntes} /> : s.loading === "syntes" ? <Section type="syntes" loading={true} loadingText="Genererar sammanv\u00E4gd bed\u00F6mning\u2026" /> : null)}
         {saveBtn}
       </div>
     );
@@ -1513,15 +1673,10 @@ export default function App() {
                         return <button key={o.k} onClick={function(){setSrc(o.k);}} style={{ padding: "8px 14px", fontSize: 12, fontWeight: 600, borderRadius: 4, border: "none", cursor: "pointer", background: active ? o.bg : "transparent", color: active ? "white" : "#64748b" }}>{o.l}</button>;
                       })}
                     </div>
-                    <span style={{ fontSize: 10, color: "#94a3b8", marginLeft: 4 }}>Djup:</span>
-                    <div style={{ display: "flex", gap: 0, background: "#e2e8f0", borderRadius: 6, padding: 2 }}>
-                      {[
-                        { k: "snabb", l: "Snabb", desc: "Sammanfattning" },
-                        { k: "detaljerad", l: "Detaljerad", desc: "100 patienter" }
-                      ].map(function(o) {
-                        var active = depth === o.k;
-                        return <button key={o.k} onClick={function(){setDepth(o.k);}} title={o.desc} style={{ padding: "8px 14px", fontSize: 12, fontWeight: 600, borderRadius: 4, border: "none", cursor: "pointer", background: active ? "#b45309" : "transparent", color: active ? "white" : "#64748b" }}>{o.l}</button>;
-                      })}
+                    <div style={{ display: "flex", alignItems: "center", gap: 4, marginLeft: 4, padding: "4px 10px", background: "#f0fdf4", borderRadius: 6, border: "1px solid #bbf7d0" }}>
+                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e" }} />
+                      <span style={{ fontSize: 10, color: "#15803d", fontWeight: 600 }}>DATABAS</span>
+                      <span style={{ fontSize: 9, color: "#4ade80" }}>tool_use</span>
                     </div>
                     <div style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
                       <button onClick={doCopy} disabled={msgs.length === 0} style={{ padding: "6px 12px", borderRadius: 6, background: copied ? "#059669" : "white", color: copied ? "white" : msgs.length === 0 ? "#cbd5e1" : "#334155", border: "1px solid " + (copied ? "#059669" : "#cbd5e1"), fontSize: 11, fontWeight: 500, cursor: msgs.length === 0 ? "default" : "pointer" }}>{copied ? "Kopierat!" : "Kopiera"}</button>
