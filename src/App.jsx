@@ -975,7 +975,7 @@ function TestprotokollTab() {
         <div style={{ fontSize: 13, fontWeight: 600, color: "#dc2626", marginBottom: 4 }}>Kunde inte ladda testprotokoll</div>
         <div style={{ fontSize: 11, color: "#64748b", marginBottom: 8 }}>{error}</div>
         <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 12, lineHeight: 1.6, maxWidth: 400 }}>
-          Testprotokollet kräver en KV-databas. Gå till Vercel Dashboard → Storage → Create Database → KV → koppla till projektet. Redeploya sedan.
+          Testprotokollet kräver en Redis-databas (Upstash). Kontrollera att databasen är kopplad till projektet i Vercel Dashboard → Storage och att miljövariablerna finns. Redeploya sedan.
         </div>
         <button onClick={function(){ setError(null); loadData(); }} style={{ padding: "6px 14px", borderRadius: 6, border: "1px solid #cbd5e1", background: "white", color: "#334155", fontSize: 11, cursor: "pointer" }}>Försök igen</button>
       </div>

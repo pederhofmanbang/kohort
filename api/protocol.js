@@ -1,8 +1,9 @@
-// Vercel serverless function — testprotokoll CRUD via Vercel KV (Redis)
-// Kräver att KV-databas är kopplad i Vercel Dashboard → Storage
+// Vercel serverless function — testprotokoll CRUD via Vercel Redis (Upstash)
+// Kräver att Redis-databas är kopplad i Vercel Dashboard → Storage
+// Stödjer både Vercel KV (KV_REST_API_URL) och Vercel Redis (UPSTASH_REDIS_REST_URL)
 
-const KV_URL = process.env.KV_REST_API_URL;
-const KV_TOKEN = process.env.KV_REST_API_TOKEN;
+const KV_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+const KV_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 
 async function kvGet(key) {
   var res = await fetch(KV_URL + "/get/" + key, {
@@ -22,7 +23,10 @@ async function kvSet(key, value) {
 
 export default async function handler(req, res) {
   if (!KV_URL || !KV_TOKEN) {
-    return res.status(500).json({ error: "KV-databas ej konfigurerad. Skapa en KV Store i Vercel Dashboard → Storage och koppla till projektet." });
+    return res.status(500).json({
+      error: "Redis ej konfigurerad. Kontrollera att Redis-databasen är kopplad till projektet i Vercel Dashboard → Storage och att miljövariablerna UPSTASH_REDIS_REST_URL och UPSTASH_REDIS_REST_TOKEN finns. Redeploya efter koppling.",
+      hint: "Tillgängliga env-variabler med 'KV' eller 'REDIS': " + Object.keys(process.env).filter(function(k) { return k.includes("KV") || k.includes("REDIS") || k.includes("UPSTASH"); }).join(", ")
+    });
   }
 
   var KEY = "kchd:testprotokoll";
