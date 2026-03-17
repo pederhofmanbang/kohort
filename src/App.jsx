@@ -210,6 +210,27 @@ function apiCall(sysPrompt, userMsg, signal) {
   });
 }
 
+// Databasdriven kohortanalys — Claude söker i patientdatabasen via tool_use
+function kohortDbCall(userMsg, wantViz, signal) {
+  var vizInstr = wantViz ? VIZ_INSTRUCTION : "";
+  return fetch("/api/cohort-chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    signal: signal,
+    body: JSON.stringify({ message: userMsg, vizInstruction: vizInstr })
+  }).then(function(r) {
+    if (!r.ok) return r.text().then(function(t) { throw new Error("API " + r.status + ": " + t.substring(0, 200)); });
+    return r.json();
+  }).then(function(d) {
+    if (d.error) throw new Error(d.error.message || d.error);
+    var text = "";
+    if (d.content) d.content.forEach(function(b) { if (b.type === "text") text += b.text; });
+    if (!text) throw new Error("Tomt svar från API");
+    var parsed = parseVizBlocks(text);
+    return { text: cleanMd(parsed.text), vizzes: parsed.vizzes };
+  });
+}
+
 // ========== UI COMPONENTS ==========
 function Paras(props) {
   var t = props.text || "";
@@ -222,7 +243,7 @@ function Paras(props) {
 }
 
 var SECTION_STYLES = {
-  kohort: { b: "#2563eb", bg: "#f7f9ff", l: "■ VÅR KOHORTDATA — syntetisk (n=100)", lb: "#1e3a5f" },
+  kohort: { b: "#2563eb", bg: "#f7f9ff", l: "■ KOHORTDATABAS — sökning via tool_use (n=100)", lb: "#1e3a5f" },
   pubmed: { b: "#059669", bg: "#f4fdf9", l: "◆ PUBLICERAD EVIDENS (PubMed E-utilities)", lb: "#065f46" },
   syntes: { b: "#7c3aed", bg: "#faf5ff", l: "▶ SAMMANVÄGD BEDÖMNING", lb: "#6b21a8" }
 };
@@ -483,8 +504,8 @@ function LathundTab() {
         <path d="M340 128 L550 128 L550 156" fill="none" stroke="#059669" strokeWidth="1"/>
 
         <rect x="40" y="160" width="180" height="52" rx="8" fill="#E6F1FB" stroke="#2563eb" strokeWidth="0.5"/>
-        <text style={{ fontSize: 12, fontWeight: 600, fill: "#0C447C" }} x="130" y="182" textAnchor="middle">Steg 1: Kohort</text>
-        <text style={{ fontSize: 10, fill: "#185FA5" }} x="130" y="198" textAnchor="middle">Claude API, ~3 sek</text>
+        <text style={{ fontSize: 12, fontWeight: 600, fill: "#0C447C" }} x="130" y="182" textAnchor="middle">Steg 1: Kohortdatabas</text>
+        <text style={{ fontSize: 10, fill: "#185FA5" }} x="130" y="198" textAnchor="middle">Claude tool_use, ~5 sek</text>
 
         <rect x="255" y="160" width="170" height="52" rx="8" fill="#f1f5f9" stroke="#94a3b8" strokeWidth="0.5"/>
         <text style={{ fontSize: 12, fontWeight: 600, fill: "#334155" }} x="340" y="182" textAnchor="middle">Diagram</text>
@@ -508,8 +529,8 @@ function LathundTab() {
 
         <rect x="60" y="370" width="270" height="40" rx="6" fill="#E6F1FB" stroke="#2563eb" strokeWidth="0.5"/>
         <rect x="60" y="370" width="4" height="40" fill="#2563eb"/>
-        <text style={{ fontSize: 10, fontWeight: 600, fill: "#0C447C" }} x="76" y="386">■ VÅR KOHORTDATA</text>
-        <text style={{ fontSize: 9, fill: "#185FA5" }} x="76" y="400">Siffror från 100 patienter</text>
+        <text style={{ fontSize: 10, fontWeight: 600, fill: "#0C447C" }} x="76" y="386">■ KOHORTDATABAS (tool_use)</text>
+        <text style={{ fontSize: 9, fill: "#185FA5" }} x="76" y="400">Claude söker i databasen via verktyg</text>
 
         <rect x="350" y="370" width="270" height="40" rx="6" fill="#E1F5EE" stroke="#059669" strokeWidth="0.5"/>
         <rect x="350" y="370" width="4" height="40" fill="#059669"/>
@@ -526,17 +547,17 @@ function LathundTab() {
         <text style={{ fontSize: 10, fontWeight: 600, fill: "#334155" }} x="76" y="490">☰ DIAGRAM</text>
         <text style={{ fontSize: 9, fill: "#64748b" }} x="76" y="504">15 förberäknade diagramtyper, visas omedelbart</text>
 
-        <text style={{ fontSize: 10, fill: "#94a3b8" }} x="340" y="544" textAnchor="middle">Blått syns efter ~3 sek · Grönt efter ~8 sek · Lila efter ~11 sek · Diagram direkt</text>
+        <text style={{ fontSize: 10, fill: "#94a3b8" }} x="340" y="544" textAnchor="middle">Blått syns efter ~5 sek (tool_use loop) · Grönt efter ~10 sek · Lila efter ~13 sek · Diagram direkt</text>
         <text style={{ fontSize: 10, fill: "#94a3b8" }} x="340" y="562" textAnchor="middle">Du väljer källa: Kohort | PubMed | Båda + syntes</text>
       </svg>
 
       <div style={{ maxWidth: 700, margin: "16px auto", fontSize: 12, lineHeight: 1.7, color: "#334155" }}>
         <div style={{ fontWeight: 600, marginBottom: 6 }}>Datakällor</div>
-        <div style={{ marginBottom: 8 }}><span style={{ color: "#2563eb", fontWeight: 600 }}>Kohortdata</span> — 100 syntetiska patienter baserade på svensk epidemiologi. Prostatacancer (C61) + insulinbehandlad diabetes (E10/E11). Inkluderar riskgrupper, behandlingar, PSA, HbA1c, komorbiditeter och utfall.</div>
+        <div style={{ marginBottom: 8 }}><span style={{ color: "#2563eb", fontWeight: 600 }}>Kohortdatabas</span> — 100 syntetiska patienter i en backend-databas. Claude söker via tool_use med verktygen search_patients, get_statistics, count_patients och cross_tabulate. Claude bestämmer själv vilka sökningar som behövs — ingen data skickas i prompten. Skalbart till valfri kohort-storlek.</div>
         <div style={{ marginBottom: 8 }}><span style={{ color: "#059669", fontWeight: 600 }}>PubMed E-utilities</span> — Direkt sökning mot NCBI:s E-utilities API (eutils.ncbi.nlm.nih.gov). Svenska frågor översätts till engelska MeSH-termer. Abstracts hämtas i XML och sammanfattas på svenska av Claude.</div>
         <div style={{ marginBottom: 8 }}><span style={{ color: "#7c3aed", fontWeight: 600 }}>Sammanvägd bedömning</span> — Claude väger samman kohortanalys och PubMed-evidens till kliniska rekommendationer. Noterar om kohortfynd stämmer med publicerad forskning.</div>
         <div style={{ fontWeight: 600, marginTop: 12, marginBottom: 6 }}>Backend</div>
-        <div>Vercel serverless functions: /api/chat (proxy till Anthropic Claude API) och /api/pubmed (E-utilities + Claude-sammanfattning). React + Vite frontend. Diagram beräknas lokalt — 15 dataset matchas mot nyckelord.</div>
+        <div>Vercel serverless functions: /api/cohort-chat (Claude tool_use loop med patientdatabas), /api/chat (Claude API proxy), /api/pubmed (E-utilities + Claude-sammanfattning). React + Vite frontend. Diagram beräknas lokalt — 15 dataset matchas mot nyckelord.</div>
       </div>
     </div>
   );
@@ -1188,7 +1209,7 @@ export default function App() {
         syntes: s.syntes || "",
         mode: s.mode || "",
         src: s.src || "",
-        depth: s.loading ? "" : "done"
+        depth: s.loading ? "" : "databas"
       })
     })
     .then(function(r) { return r.json(); })
@@ -1209,7 +1230,7 @@ export default function App() {
     var q = text.trim();
     var currentMode = mode;
     var currentSrc = src;
-    var currentDepth = depth;
+    // depth inte längre relevant — Claude söker alltid all data via tool_use
     var userMsg = { role: "user", content: q };
     var newMsgs = msgs.concat([userMsg]);
     var msgIdx = newMsgs.length;
@@ -1256,8 +1277,7 @@ export default function App() {
 
     // ===== BARA KOHORT =====
     if (wantKohort && !wantPubmed) {
-      var kp = (currentMode === "viz") ? PROMPT_KOHORT_SHORT : (currentDepth === "detaljerad") ? PROMPT_KOHORT_DETAIL : PROMPT_KOHORT;
-      apiCall(kp, q, ctrl.signal).then(function(result) {
+      kohortDbCall(q, wantChart, ctrl.signal).then(function(result) {
         if (result.vizzes && result.vizzes.length > 0) {
           setCharts(function(prev) { return prev.concat(result.vizzes); });
         }
@@ -1290,8 +1310,7 @@ export default function App() {
     }
 
     // ===== BÅDA (kohort → pubmed → syntes) =====
-    var kohortPrompt = (currentMode === "viz") ? PROMPT_KOHORT_SHORT : (currentDepth === "detaljerad") ? PROMPT_KOHORT_DETAIL : PROMPT_KOHORT;
-    apiCall(kohortPrompt, q, ctrl.signal)
+    kohortDbCall(q, wantChart, ctrl.signal)
     .then(function(result) {
       if (result.vizzes && result.vizzes.length > 0) {
         setCharts(function(prev) { return prev.concat(result.vizzes); });
@@ -1513,15 +1532,10 @@ export default function App() {
                         return <button key={o.k} onClick={function(){setSrc(o.k);}} style={{ padding: "8px 14px", fontSize: 12, fontWeight: 600, borderRadius: 4, border: "none", cursor: "pointer", background: active ? o.bg : "transparent", color: active ? "white" : "#64748b" }}>{o.l}</button>;
                       })}
                     </div>
-                    <span style={{ fontSize: 10, color: "#94a3b8", marginLeft: 4 }}>Djup:</span>
-                    <div style={{ display: "flex", gap: 0, background: "#e2e8f0", borderRadius: 6, padding: 2 }}>
-                      {[
-                        { k: "snabb", l: "Snabb", desc: "Sammanfattning" },
-                        { k: "detaljerad", l: "Detaljerad", desc: "100 patienter" }
-                      ].map(function(o) {
-                        var active = depth === o.k;
-                        return <button key={o.k} onClick={function(){setDepth(o.k);}} title={o.desc} style={{ padding: "8px 14px", fontSize: 12, fontWeight: 600, borderRadius: 4, border: "none", cursor: "pointer", background: active ? "#b45309" : "transparent", color: active ? "white" : "#64748b" }}>{o.l}</button>;
-                      })}
+                    <div style={{ display: "flex", alignItems: "center", gap: 4, marginLeft: 4, padding: "4px 10px", background: "#f0fdf4", borderRadius: 6, border: "1px solid #bbf7d0" }}>
+                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e" }} />
+                      <span style={{ fontSize: 10, color: "#15803d", fontWeight: 600 }}>DATABAS</span>
+                      <span style={{ fontSize: 9, color: "#4ade80" }}>tool_use</span>
                     </div>
                     <div style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
                       <button onClick={doCopy} disabled={msgs.length === 0} style={{ padding: "6px 12px", borderRadius: 6, background: copied ? "#059669" : "white", color: copied ? "white" : msgs.length === 0 ? "#cbd5e1" : "#334155", border: "1px solid " + (copied ? "#059669" : "#cbd5e1"), fontSize: 11, fontWeight: 500, cursor: msgs.length === 0 ? "default" : "pointer" }}>{copied ? "Kopierat!" : "Kopiera"}</button>
