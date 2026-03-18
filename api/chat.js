@@ -11,6 +11,16 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Validera input — tillåt bara förväntade modeller och begränsa tokens
+    var body = req.body || {};
+    var allowedModels = ["claude-sonnet-4-20250514", "claude-haiku-4-5-20251001"];
+    if (body.model && allowedModels.indexOf(body.model) < 0) {
+      return res.status(400).json({ error: "Model not allowed: " + body.model });
+    }
+    if (body.max_tokens && body.max_tokens > 4096) {
+      body.max_tokens = 4096;
+    }
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -18,12 +28,14 @@ export default async function handler(req, res) {
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01'
       },
-      body: JSON.stringify(req.body)
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(25000)
     });
 
     const data = await response.json();
-    res.status(200).json(data);
+    res.status(response.ok ? 200 : response.status).json(data);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    var status = error.name === "TimeoutError" ? 504 : 500;
+    res.status(status).json({ error: "API request failed" });
   }
 }

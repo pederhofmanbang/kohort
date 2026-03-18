@@ -275,56 +275,73 @@ var TOOLS = [
       },
       required: ["search_term"]
     }
+  },
+  {
+    name: "get_patient_functional_status",
+    description: "Hämta funktionsstatus (WHO/ECOG performance status) för en enskild patient.",
+    input_schema: {
+      type: "object",
+      properties: {
+        patient_id: { type: "string", description: "Patient-ID, t.ex. 'P001'." }
+      },
+      required: ["patient_id"]
+    }
   }
 ];
 
 // Exekvera ett verktygsanrop
 function executeTool(name, input) {
-  switch (name) {
-    case "search_patients":
-      return db.searchPatients(input.filters, input.fields, Math.min(input.limit || 20, 100));
-    case "get_statistics":
-      return db.getStatistics(input.field, input.group_by, input.filters);
-    case "count_patients":
-      return db.countPatients(input.filters);
-    case "cross_tabulate":
-      return db.crossTabulate(input.field1, input.field2, input.filters);
-    case "get_time_series":
-      return db.getTimeSeries(input.measure, input.group_by, input.filters);
-    case "get_patient_time_series":
-      return db.getPatientTimeSeries(input.patient_ids, input.measures);
-    case "get_patient_detail":
-      return db.getPatientDetail(input.patient_id);
-    case "get_patient_diagnoses":
-      return db.getPatientDiagnoses(input.patient_id);
-    case "get_patient_medications":
-      return db.getPatientMedications(input.patient_id);
-    case "get_patient_lab_results":
-      return db.getPatientLabResults(input.patient_id, input.lab_name);
-    case "get_patient_care_documentation":
-      return db.getPatientCareDocumentation(input.patient_id);
-    case "get_patient_imaging":
-      return db.getPatientImaging(input.patient_id);
-    case "get_patient_referrals":
-      return db.getPatientReferrals(input.patient_id);
-    case "get_patient_care_contacts":
-      return db.getPatientCareContacts(input.patient_id);
-    case "get_patient_vaccinations":
-      return db.getPatientVaccinations(input.patient_id);
-    case "get_patient_care_plans":
-      return db.getPatientCarePlans(input.patient_id);
-    case "get_patient_alerts":
-      return db.getPatientAlerts(input.patient_id);
-    case "search_medications":
-      return db.searchMedications(input.atc_code, input.product_name, input.filters);
-    case "get_medication_statistics":
-      return db.getMedicationStatistics(input.filters);
-    case "search_diagnoses":
-      return db.searchDiagnoses(input.icd_code, input.filters);
-    case "search_care_documentation":
-      return db.searchCareDocumentation(input.search_term, input.filters);
-    default:
-      return { error: "Unknown tool: " + name };
+  try {
+    switch (name) {
+      case "search_patients":
+        return db.searchPatients(input.filters, input.fields, Math.min(input.limit || 20, 100));
+      case "get_statistics":
+        return db.getStatistics(input.field, input.group_by, input.filters);
+      case "count_patients":
+        return db.countPatients(input.filters);
+      case "cross_tabulate":
+        return db.crossTabulate(input.field1, input.field2, input.filters);
+      case "get_time_series":
+        return db.getTimeSeries(input.measure, input.group_by, input.filters);
+      case "get_patient_time_series":
+        return db.getPatientTimeSeries(input.patient_ids, input.measures);
+      case "get_patient_detail":
+        return db.getPatientDetail(input.patient_id);
+      case "get_patient_diagnoses":
+        return db.getPatientDiagnoses(input.patient_id);
+      case "get_patient_medications":
+        return db.getPatientMedications(input.patient_id);
+      case "get_patient_lab_results":
+        return db.getPatientLabResults(input.patient_id, input.lab_name);
+      case "get_patient_care_documentation":
+        return db.getPatientCareDocumentation(input.patient_id);
+      case "get_patient_imaging":
+        return db.getPatientImaging(input.patient_id);
+      case "get_patient_referrals":
+        return db.getPatientReferrals(input.patient_id);
+      case "get_patient_care_contacts":
+        return db.getPatientCareContacts(input.patient_id);
+      case "get_patient_vaccinations":
+        return db.getPatientVaccinations(input.patient_id);
+      case "get_patient_care_plans":
+        return db.getPatientCarePlans(input.patient_id);
+      case "get_patient_alerts":
+        return db.getPatientAlerts(input.patient_id);
+      case "get_patient_functional_status":
+        return db.getPatientFunctionalStatus(input.patient_id);
+      case "search_medications":
+        return db.searchMedications(input.atc_code, input.product_name, input.filters);
+      case "get_medication_statistics":
+        return db.getMedicationStatistics(input.filters);
+      case "search_diagnoses":
+        return db.searchDiagnoses(input.icd_code, input.filters);
+      case "search_care_documentation":
+        return db.searchCareDocumentation(input.search_term, input.filters);
+      default:
+        return { error: "Unknown tool: " + name };
+    }
+  } catch (err) {
+    return { error: "Tool execution failed: " + err.message };
   }
 }
 
@@ -398,8 +415,14 @@ export default async function handler(req, res) {
           "x-api-key": apiKey,
           "anthropic-version": "2023-06-01"
         },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(25000)
       });
+
+      if (!response.ok) {
+        var errBody = await response.text();
+        return res.status(response.status).json({ error: "Claude API " + response.status + ": " + errBody.substring(0, 200) });
+      }
 
       var data = await response.json();
 

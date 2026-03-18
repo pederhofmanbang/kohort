@@ -300,13 +300,21 @@ function getPatientTimeSeries(patientIds, measures) {
 
 // ========== RICH DATA QUERIES (from full JSON) ==========
 
-function getPatientDetail(patientId) {
+function findFullPatient(patientId) {
   var raw = FULL_PATIENTS.find(function(p) { return p.patient_id === patientId; });
   if (!raw) {
-    var byNum = FULL_PATIENTS[parseInt(patientId) - 1];
-    if (byNum) raw = byNum;
-    else return { error: "Patient not found: " + patientId };
+    // Stöd numeriskt ID (1-100) och format som "P1", "p001" etc.
+    var num = parseInt(String(patientId).replace(/^[Pp]0*/, ""));
+    if (!isNaN(num) && num >= 1 && num <= FULL_PATIENTS.length) {
+      raw = FULL_PATIENTS[num - 1];
+    }
   }
+  return raw || null;
+}
+
+function getPatientDetail(patientId) {
+  var raw = findFullPatient(patientId);
+  if (!raw) return { error: "Patient not found: " + patientId };
   return {
     patient_id: raw.patient_id,
     demographics: raw.demographics,
@@ -327,19 +335,19 @@ function getPatientDetail(patientId) {
 }
 
 function getPatientDiagnoses(patientId) {
-  var raw = FULL_PATIENTS.find(function(p) { return p.patient_id === patientId; });
+  var raw = findFullPatient(patientId);
   if (!raw) return { error: "Patient not found: " + patientId };
   return { patient_id: raw.patient_id, namn: raw.demographics.namn, diagnoses: raw.GetDiagnosis };
 }
 
 function getPatientMedications(patientId) {
-  var raw = FULL_PATIENTS.find(function(p) { return p.patient_id === patientId; });
+  var raw = findFullPatient(patientId);
   if (!raw) return { error: "Patient not found: " + patientId };
   return { patient_id: raw.patient_id, namn: raw.demographics.namn, medications: raw.GetMedicationHistory };
 }
 
 function getPatientLabResults(patientId, labName) {
-  var raw = FULL_PATIENTS.find(function(p) { return p.patient_id === patientId; });
+  var raw = findFullPatient(patientId);
   if (!raw) return { error: "Patient not found: " + patientId };
   var labs = raw.GetLaboratoryOrderOutcome;
   if (labName) {
@@ -350,49 +358,49 @@ function getPatientLabResults(patientId, labName) {
 }
 
 function getPatientCareDocumentation(patientId) {
-  var raw = FULL_PATIENTS.find(function(p) { return p.patient_id === patientId; });
+  var raw = findFullPatient(patientId);
   if (!raw) return { error: "Patient not found: " + patientId };
   return { patient_id: raw.patient_id, namn: raw.demographics.namn, documents: raw.GetCareDocumentation };
 }
 
 function getPatientImaging(patientId) {
-  var raw = FULL_PATIENTS.find(function(p) { return p.patient_id === patientId; });
+  var raw = findFullPatient(patientId);
   if (!raw) return { error: "Patient not found: " + patientId };
   return { patient_id: raw.patient_id, namn: raw.demographics.namn, imaging: raw.GetImagingOutcome };
 }
 
 function getPatientReferrals(patientId) {
-  var raw = FULL_PATIENTS.find(function(p) { return p.patient_id === patientId; });
+  var raw = findFullPatient(patientId);
   if (!raw) return { error: "Patient not found: " + patientId };
   return { patient_id: raw.patient_id, namn: raw.demographics.namn, referrals: raw.GetReferralOutcome };
 }
 
 function getPatientCareContacts(patientId) {
-  var raw = FULL_PATIENTS.find(function(p) { return p.patient_id === patientId; });
+  var raw = findFullPatient(patientId);
   if (!raw) return { error: "Patient not found: " + patientId };
   return { patient_id: raw.patient_id, namn: raw.demographics.namn, care_contacts: raw.GetCareContacts };
 }
 
 function getPatientVaccinations(patientId) {
-  var raw = FULL_PATIENTS.find(function(p) { return p.patient_id === patientId; });
+  var raw = findFullPatient(patientId);
   if (!raw) return { error: "Patient not found: " + patientId };
   return { patient_id: raw.patient_id, namn: raw.demographics.namn, vaccinations: raw.GetVaccinationHistory };
 }
 
 function getPatientCarePlans(patientId) {
-  var raw = FULL_PATIENTS.find(function(p) { return p.patient_id === patientId; });
+  var raw = findFullPatient(patientId);
   if (!raw) return { error: "Patient not found: " + patientId };
   return { patient_id: raw.patient_id, namn: raw.demographics.namn, care_plans: raw.GetCarePlans };
 }
 
 function getPatientAlerts(patientId) {
-  var raw = FULL_PATIENTS.find(function(p) { return p.patient_id === patientId; });
+  var raw = findFullPatient(patientId);
   if (!raw) return { error: "Patient not found: " + patientId };
   return { patient_id: raw.patient_id, namn: raw.demographics.namn, alerts: raw.GetAlertInformation };
 }
 
 function getPatientFunctionalStatus(patientId) {
-  var raw = FULL_PATIENTS.find(function(p) { return p.patient_id === patientId; });
+  var raw = findFullPatient(patientId);
   if (!raw) return { error: "Patient not found: " + patientId };
   return { patient_id: raw.patient_id, namn: raw.demographics.namn, functional_status: raw.GetFunctionalStatus };
 }
@@ -401,11 +409,11 @@ function getPatientFunctionalStatus(patientId) {
 
 function searchMedications(atcCode, productName, filters) {
   var data = applyFilters(PATIENTS, filters);
-  var matchingIds = data.map(function(p) { return p.patient_id; });
+  var matchingIds = new Set(data.map(function(p) { return p.patient_id; }));
   var results = [];
 
   FULL_PATIENTS.forEach(function(raw) {
-    if (matchingIds.indexOf(raw.patient_id) < 0) return;
+    if (!matchingIds.has(raw.patient_id)) return;
     var meds = raw.GetMedicationHistory.filter(function(m) {
       var matchAtc = !atcCode || m.atcCode.indexOf(atcCode) === 0;
       var matchName = !productName || m.productName.toLowerCase().indexOf(productName.toLowerCase()) >= 0;
@@ -420,17 +428,17 @@ function searchMedications(atcCode, productName, filters) {
     }
   });
 
-  return { total_patients_with_match: results.length, total_searched: matchingIds.length, results: results };
+  return { total_patients_with_match: results.length, total_searched: matchingIds.size, results: results };
 }
 
 function getMedicationStatistics(filters) {
   var data = applyFilters(PATIENTS, filters);
-  var matchingIds = data.map(function(p) { return p.patient_id; });
+  var matchingIds = new Set(data.map(function(p) { return p.patient_id; }));
   var drugCounts = {};
   var atcCounts = {};
 
   FULL_PATIENTS.forEach(function(raw) {
-    if (matchingIds.indexOf(raw.patient_id) < 0) return;
+    if (!matchingIds.has(raw.patient_id)) return;
     raw.GetMedicationHistory.forEach(function(m) {
       var key = m.atcCode + " " + m.productName;
       drugCounts[key] = (drugCounts[key] || 0) + 1;
@@ -442,16 +450,16 @@ function getMedicationStatistics(filters) {
   var sorted = Object.keys(drugCounts).sort(function(a, b) { return drugCounts[b] - drugCounts[a]; });
   var topDrugs = sorted.slice(0, 30).map(function(k) { return { drug: k, count: drugCounts[k] }; });
 
-  return { n_patients: matchingIds.length, top_drugs: topDrugs, atc_groups: atcCounts };
+  return { n_patients: matchingIds.size, top_drugs: topDrugs, atc_groups: atcCounts };
 }
 
 function searchDiagnoses(icdCode, filters) {
   var data = applyFilters(PATIENTS, filters);
-  var matchingIds = data.map(function(p) { return p.patient_id; });
+  var matchingIds = new Set(data.map(function(p) { return p.patient_id; }));
   var results = [];
 
   FULL_PATIENTS.forEach(function(raw) {
-    if (matchingIds.indexOf(raw.patient_id) < 0) return;
+    if (!matchingIds.has(raw.patient_id)) return;
     var diags = raw.GetDiagnosis.filter(function(d) {
       return !icdCode || d.code.indexOf(icdCode) === 0;
     });
@@ -464,17 +472,17 @@ function searchDiagnoses(icdCode, filters) {
     }
   });
 
-  return { total_patients_with_match: results.length, total_searched: matchingIds.length, results: results };
+  return { total_patients_with_match: results.length, total_searched: matchingIds.size, results: results };
 }
 
 function searchCareDocumentation(searchTerm, filters) {
   var data = applyFilters(PATIENTS, filters);
-  var matchingIds = data.map(function(p) { return p.patient_id; });
+  var matchingIds = new Set(data.map(function(p) { return p.patient_id; }));
   var results = [];
   var lower = searchTerm ? searchTerm.toLowerCase() : "";
 
   FULL_PATIENTS.forEach(function(raw) {
-    if (matchingIds.indexOf(raw.patient_id) < 0) return;
+    if (!matchingIds.has(raw.patient_id)) return;
     var docs = raw.GetCareDocumentation.filter(function(d) {
       if (!searchTerm) return true;
       return (d.text && d.text.toLowerCase().indexOf(lower) >= 0) ||
@@ -489,7 +497,7 @@ function searchCareDocumentation(searchTerm, filters) {
     }
   });
 
-  return { total_patients_with_match: results.length, total_searched: matchingIds.length, results: results.slice(0, 20) };
+  return { total_patients_with_match: results.length, total_searched: matchingIds.size, results: results.slice(0, 20) };
 }
 
 // Export for use in cohort-chat.js

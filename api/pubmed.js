@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { query, maxResults = 5 } = req.body;
+  const { query, maxResults = 8, userQuestion = "" } = req.body;
   if (!query) {
     return res.status(400).json({ error: "Missing query" });
   }
@@ -22,14 +22,18 @@ export default async function handler(req, res) {
       term: query,
       retmax: String(maxResults),
       sort: "relevance",
-      retmode: "json"
+      retmode: "json",
+      mindate: "2015",
+      maxdate: "2026",
+      datetype: "pdat"
     });
     // Lägg till API-nyckel om den finns (ger högre rate limit)
     if (process.env.NCBI_API_KEY) {
       searchParams.set("api_key", process.env.NCBI_API_KEY);
     }
 
-    const searchRes = await fetch(`${EUTILS_BASE}/esearch.fcgi?${searchParams}`);
+    const searchRes = await fetch(`${EUTILS_BASE}/esearch.fcgi?${searchParams}`, { signal: AbortSignal.timeout(10000) });
+    if (!searchRes.ok) throw new Error("PubMed esearch returned " + searchRes.status);
     const searchData = await searchRes.json();
 
     const pmids = searchData?.esearchresult?.idlist || [];
@@ -55,7 +59,8 @@ export default async function handler(req, res) {
       fetchParams.set("api_key", process.env.NCBI_API_KEY);
     }
 
-    const fetchRes = await fetch(`${EUTILS_BASE}/efetch.fcgi?${fetchParams}`);
+    const fetchRes = await fetch(`${EUTILS_BASE}/efetch.fcgi?${fetchParams}`, { signal: AbortSignal.timeout(10000) });
+    if (!fetchRes.ok) throw new Error("PubMed efetch returned " + fetchRes.status);
     const xmlText = await fetchRes.text();
 
     // Parsa XML till artikeldata (enkel regex-parser för PubMed XML)
@@ -84,12 +89,15 @@ export default async function handler(req, res) {
             "x-api-key": apiKey,
             "anthropic-version": "2023-06-01"
           },
+          signal: AbortSignal.timeout(25000),
           body: JSON.stringify({
             model: "claude-sonnet-4-20250514",
             max_tokens: 1024,
             system: "Du är en medicinsk forskare. Svara på svenska med åäö.\n\n"
-              + "Sammanfatta de viktigaste fynden från artiklarna nedan. "
+              + "Användaren ställde följande fråga: \"" + (userQuestion || "allmän sökning") + "\"\n\n"
+              + "Sammanfatta de viktigaste fynden från artiklarna nedan som är relevanta för användarens fråga. "
               + "Citera varje studie med författare och årtal. "
+              + "Fokusera på kliniskt relevanta resultat. "
               + "Skriv 4-8 meningar ren löptext. Ingen markdown.",
             messages: [{ role: "user", content: articlesText }]
           })

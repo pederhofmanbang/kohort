@@ -261,4 +261,4 @@ function computeChartsDB(cohort) {
 var COHORT = computeCohort();
 var CHARTS_DB = computeChartsDB(COHORT);
 
-export { PATIENTS, COHORT, CHARTS_DB, RAW };
+export { PATIENTS, COHORT, CHARTS_DB };
