@@ -28,12 +28,14 @@ export default async function handler(req, res) {
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01'
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(25000)
     });
 
     const data = await response.json();
-    res.status(200).json(data);
+    res.status(response.ok ? 200 : response.status).json(data);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    var status = error.name === "TimeoutError" ? 504 : 500;
+    res.status(status).json({ error: "API request failed" });
   }
 }

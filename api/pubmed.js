@@ -33,6 +33,7 @@ export default async function handler(req, res) {
     }
 
     const searchRes = await fetch(`${EUTILS_BASE}/esearch.fcgi?${searchParams}`, { signal: AbortSignal.timeout(10000) });
+    if (!searchRes.ok) throw new Error("PubMed esearch returned " + searchRes.status);
     const searchData = await searchRes.json();
 
     const pmids = searchData?.esearchresult?.idlist || [];
@@ -59,6 +60,7 @@ export default async function handler(req, res) {
     }
 
     const fetchRes = await fetch(`${EUTILS_BASE}/efetch.fcgi?${fetchParams}`, { signal: AbortSignal.timeout(10000) });
+    if (!fetchRes.ok) throw new Error("PubMed efetch returned " + fetchRes.status);
     const xmlText = await fetchRes.text();
 
     // Parsa XML till artikeldata (enkel regex-parser för PubMed XML)
