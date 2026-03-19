@@ -97,10 +97,13 @@ function apiCall(sysPrompt, userMsg, signal) {
     signal: signal,
     body: JSON.stringify(body)
   }).then(function(r) {
-    if (!r.ok) return r.text().then(function(t) { throw new Error("API " + r.status + ": " + t.substring(0, 200)); });
+    if (!r.ok) return r.json().catch(function() { return {}; }).then(function(d) {
+      if (r.status === 429) throw new Error("API:t \u00e4r tillf\u00e4lligt \u00f6verbelastat. V\u00e4nta n\u00e5gra sekunder och f\u00f6rs\u00f6k igen.");
+      throw new Error(d.error || "Serverfel (status " + r.status + ")");
+    });
     return r.json();
   }).then(function(d) {
-    if (d.error) throw new Error(d.error.message || d.error);
+    if (d.error) throw new Error(d.error);
     var text = "";
     if (d.content) d.content.forEach(function(b) { if (b.type === "text") text += b.text; });
     if (!text) throw new Error("Tomt svar fr\u00E5n API");
@@ -117,10 +120,13 @@ function kohortDbCall(userMsg, wantViz, signal) {
     signal: signal,
     body: JSON.stringify({ message: userMsg, vizInstruction: vizInstr })
   }).then(function(r) {
-    if (!r.ok) return r.text().then(function(t) { throw new Error("API " + r.status + ": " + t.substring(0, 200)); });
+    if (!r.ok) return r.json().catch(function() { return {}; }).then(function(d) {
+      if (r.status === 429) throw new Error("API:t \u00e4r tillf\u00e4lligt \u00f6verbelastat. V\u00e4nta n\u00e5gra sekunder och f\u00f6rs\u00f6k igen.");
+      throw new Error(d.error || "Serverfel (status " + r.status + ")");
+    });
     return r.json();
   }).then(function(d) {
-    if (d.error) throw new Error(d.error.message || d.error);
+    if (d.error) throw new Error(d.error);
     var text = "";
     if (d.content) d.content.forEach(function(b) { if (b.type === "text") text += b.text; });
     if (!text) throw new Error("Tomt svar fr\u00E5n API");
@@ -137,7 +143,10 @@ function pubmedCall(question, signal) {
     signal: signal,
     body: JSON.stringify({ query: searchQuery, maxResults: 8, userQuestion: question })
   }).then(function(r) {
-    if (!r.ok) return r.text().then(function(t) { throw new Error("PubMed API " + r.status + ": " + t.substring(0, 200)); });
+    if (!r.ok) return r.json().catch(function() { return {}; }).then(function(d) {
+      if (r.status === 429) throw new Error("PubMed API:t \u00e4r tillf\u00e4lligt \u00f6verbelastat. V\u00e4nta n\u00e5gra sekunder och f\u00f6rs\u00f6k igen.");
+      throw new Error(d.error || "PubMed-s\u00f6kning misslyckades (status " + r.status + ")");
+    });
     return r.json();
   }).then(function(data) {
     if (data.error) throw new Error(data.error);

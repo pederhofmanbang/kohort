@@ -420,8 +420,11 @@ export default async function handler(req, res) {
       });
 
       if (!response.ok) {
-        var errBody = await response.text();
-        return res.status(response.status).json({ error: "Claude API " + response.status + ": " + errBody.substring(0, 200) });
+        var errBody = await response.text().catch(function() { return ""; });
+        if (response.status === 429) {
+          return res.status(429).json({ error: "API:t är tillfälligt överbelastat. Vänta några sekunder och försök igen." });
+        }
+        return res.status(response.status).json({ error: "Claude API svarade med status " + response.status });
       }
 
       var data = await response.json();
@@ -455,10 +458,15 @@ export default async function handler(req, res) {
           input: tu.input,
           result: result
         });
+        var resultStr = JSON.stringify(result);
+        // Trunkera stora resultat för att hålla oss under rate limits (30K input tokens/min)
+        if (resultStr.length > 8000) {
+          resultStr = resultStr.substring(0, 8000) + '... [trunkerad, ' + resultStr.length + ' tecken totalt]';
+        }
         return {
           type: "tool_result",
           tool_use_id: tu.id,
-          content: JSON.stringify(result)
+          content: resultStr
         };
       });
 
